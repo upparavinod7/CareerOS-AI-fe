@@ -230,7 +230,7 @@ Fit Score = (Matched Skills / Total Required Skills) × 100
 # 🏛 Project Architecture
 
 ```
-client/
+ AI SKILL AND ROLE PREDICT/
   components/
   pages/
   services/
