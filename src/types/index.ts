@@ -70,6 +70,7 @@ export type FitResult = {
   strongSkills: string[];
   missingSkills: string[];
   suggestions: string[];
+  categories?: { subject: string; score: number }[];
 };
 
 export type Roadmap = {

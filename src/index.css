@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light dark;
 }
 
 * {
@@ -13,17 +13,46 @@
 body {
   margin: 0;
   min-height: 100vh;
-  font-family: "Manrope", "Plus Jakarta Sans", "Segoe UI", sans-serif;
-  background:
-    radial-gradient(65rem 35rem at 0% -15%, rgba(34, 211, 238, 0.16), transparent 58%),
-    radial-gradient(60rem 35rem at 110% -25%, rgba(45, 212, 191, 0.14), transparent 55%),
-    radial-gradient(45rem 22rem at 50% 130%, rgba(139, 92, 246, 0.1), transparent 55%),
-    #030712;
-  color: #e2e8f0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Premium Aurora Light Mode */
+  background-color: #fafafa;
+  background-image: 
+    radial-gradient(at 100% 0%, hsla(286,81%,36%,0.04) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, hsla(240,100%,70%,0.04) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, hsla(286,81%,36%,0.04) 0px, transparent 50%);
+  background-attachment: fixed;
+  color: #0f172a;
+  overflow-x: hidden;
+  transition: background-color 0.5s ease, color 0.5s ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #09090b; /* deeply dark zinc */
+    background-image: 
+      radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.08), transparent 25%),
+      radial-gradient(circle at 85% 30%, rgba(168, 85, 247, 0.08), transparent 25%);
+    background-attachment: fixed;
+    color: #f8fafc;
+  }
+}
+
+.dark body {
+  background-color: #09090b;
+  background-image: 
+    radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.08), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(168, 85, 247, 0.08), transparent 25%);
+  background-attachment: fixed;
+  color: #f8fafc;
 }
 
 #root {
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 input,
@@ -34,28 +63,79 @@ select {
 }
 
 ::selection {
-  background: rgba(45, 212, 191, 0.35);
-  color: #ecfeff;
+  background: rgba(99, 102, 241, 0.3);
+  color: inherit;
 }
 
-.glass {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: linear-gradient(130deg, rgba(12, 23, 47, 0.82), rgba(10, 15, 29, 0.82));
-  backdrop-filter: blur(12px);
-  box-shadow: 0 20px 55px rgba(2, 6, 23, 0.4);
+@layer components {
+  /* Ultra-Premium Glass Cards */
+  .saas-card {
+    @apply relative overflow-hidden rounded-2xl bg-white/60 dark:bg-zinc-900/40 backdrop-blur-xl border border-slate-200/60 dark:border-white/[0.08] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] transition-all duration-300;
+  }
+
+  .saas-card:hover {
+    @apply border-slate-300/80 dark:border-white/[0.12] shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)];
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-br from-slate-900 to-slate-500 dark:from-white dark:to-slate-400;
+  }
+
+  .bg-gradient-brand {
+    @apply bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-400 hover:to-purple-400 text-white shadow-lg shadow-indigo-500/25 transition-all;
+  }
 }
 
+/* Clean scrollbars */
 .soft-scroll {
   scrollbar-width: thin;
-  scrollbar-color: rgba(148, 163, 184, 0.45) transparent;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+@media (prefers-color-scheme: dark) {
+  .soft-scroll {
+    scrollbar-color: #334155 transparent;
+  }
+}
+
+.dark .soft-scroll {
+  scrollbar-color: #334155 transparent;
 }
 
 .soft-scroll::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
+}
+
+.soft-scroll::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .soft-scroll::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.35);
-  border-radius: 20px;
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.dark .soft-scroll::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+@media (prefers-color-scheme: dark) {
+  .soft-scroll::-webkit-scrollbar-thumb {
+    background: #475569;
+  }
+}
+
+.soft-scroll::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.dark .soft-scroll::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+@media (prefers-color-scheme: dark) {
+  .soft-scroll::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+  }
 }

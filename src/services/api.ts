@@ -1,4 +1,4 @@
-﻿import http from "./http";
+import http from "./http";
 import type {
   Application,
   AuthResponse,
@@ -66,6 +66,12 @@ export const api = {
         mockPlan: string[];
       }>("/ai/interview-guidance", payload)
       .then((r) => r.data),
+
+  generateCoverLetter: (payload: { role: string; companyName: string; jobDescription: string; resumeText: string }) =>
+    http.post<{ coverLetter: string }>("/ai/cover-letter", payload).then((r) => r.data),
+
+  chatMockInterview: (payload: { role: string; messageHistory: { role: string, content: string }[]; currentAnswer: string }) =>
+    http.post<{ reply: string, score: number | null }>("/ai/chat-mock-interview", payload).then((r) => r.data),
 
   dashboard: () => http.get<DashboardData>("/dashboard").then((r) => r.data),
 
