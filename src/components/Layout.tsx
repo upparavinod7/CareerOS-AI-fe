@@ -36,17 +36,17 @@ function Sidebar({ close }: { close?: () => void }) {
   const { user } = useAuth();
   
   return (
-    <aside className="flex h-full flex-col bg-white/50 dark:bg-zinc-950/50 backdrop-blur-xl border-r border-slate-200/50 dark:border-white/10 w-[260px] relative z-20">
-      <div className="flex h-16 items-center border-b border-slate-200/50 dark:border-white/10 px-6">
-        <div className="flex items-center gap-2.5 text-brand-600 dark:text-brand-500">
+    <aside className="flex h-full flex-col bg-white dark:bg-[#000] border-r border-gray-200 dark:border-[#222] w-[260px] relative z-20">
+      <div className="flex h-16 items-center border-b border-gray-200 dark:border-[#222] px-6">
+        <div className="flex items-center gap-2.5 text-black dark:text-white">
           <LineChart size={24} strokeWidth={2.5} />
-          <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">CareerOS</span>
+          <span className="text-lg font-bold tracking-tight">CareerOS</span>
         </div>
       </div>
 
       <nav className="flex-1 space-y-1 px-4 py-6 overflow-y-auto soft-scroll">
         <div className="mb-4 px-2">
-          <p className="text-xs font-semibold tracking-wider text-slate-500 uppercase">Core Platform</p>
+          <p className="text-xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Core Platform</p>
         </div>
         {links.map((item) => {
           const Icon = item.icon;
@@ -58,14 +58,14 @@ function Sidebar({ close }: { close?: () => void }) {
               className={({ isActive }) =>
                 `group flex items-center gap-3 rounded-md px-2.5 py-2 text-sm font-medium transition-colors ${
                   isActive
-                    ? "bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-400"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-slate-200"
+                    ? "bg-gray-100 text-black dark:bg-[#111] dark:text-white"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-black dark:text-gray-400 dark:hover:bg-[#111] dark:hover:text-white"
                 }`
               }
             >
               {({ isActive }) => (
                 <>
-                  <Icon size={18} className={isActive ? "text-brand-600 dark:text-brand-400" : "text-slate-400 group-hover:text-slate-500 dark:text-slate-500 dark:group-hover:text-slate-400"} />
+                  <Icon size={18} className={isActive ? "text-black dark:text-white" : "text-gray-400 group-hover:text-gray-600 dark:text-gray-500 dark:group-hover:text-gray-300"} />
                   {item.label}
                 </>
               )}
@@ -74,14 +74,14 @@ function Sidebar({ close }: { close?: () => void }) {
         })}
       </nav>
       
-      <div className="border-t border-slate-200/50 dark:border-white/10 p-4">
-        <div className="flex items-center gap-3 rounded-xl border border-slate-200/50 dark:border-white/10 bg-white/40 dark:bg-zinc-800/40 p-3 shadow-sm">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-brand text-sm font-bold text-white shadow-inner">
+      <div className="border-t border-gray-200 dark:border-[#222] p-4 text-sm">
+        <div className="flex items-center gap-3 rounded-lg border border-gray-200 dark:border-[#222] bg-white dark:bg-[#0a0a0a] p-3 shadow-sm transition-all hover:border-gray-300 dark:hover:border-[#333]">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-black dark:bg-white text-sm font-bold text-white dark:text-black shadow-none">
              {user?.name?.[0]?.toUpperCase() || "U"}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="truncate text-sm font-medium text-slate-900 dark:text-slate-200">{user?.name}</p>
-            <p className="truncate text-xs text-slate-500 dark:text-slate-400">{user?.email}</p>
+            <p className="truncate font-medium text-black dark:text-white">{user?.name}</p>
+            <p className="truncate text-xs text-gray-500 dark:text-gray-400">{user?.email}</p>
           </div>
         </div>
       </div>
@@ -97,7 +97,7 @@ export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="min-h-screen text-slate-900 dark:text-slate-50">
+    <div className="min-h-screen text-gray-900 dark:text-gray-50 bg-white dark:bg-[#000] font-sans transition-colors duration-300">
       {/* Desktop Sidebar */}
       <div className="hidden md:fixed md:inset-y-0 md:flex md:w-[260px] md:flex-col">
         <Sidebar />
@@ -105,21 +105,21 @@ export default function Layout() {
 
       <div className="flex flex-1 flex-col md:pl-[260px]">
         {/* Top Header */}
-        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between gap-x-4 border-b border-slate-200/50 dark:border-white/10 bg-white/50 dark:bg-zinc-950/50 backdrop-blur-xl px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
+        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between gap-x-4 border-b border-gray-200 dark:border-[#222] bg-white dark:bg-[#000] px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
           <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
             <button
               onClick={() => setMobileOpen(true)}
-              className="-m-2.5 p-2.5 text-slate-500 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-300 md:hidden"
+              className="-m-2.5 p-2.5 text-gray-500 hover:text-gray-600 dark:text-gray-400 md:hidden"
             >
               <Menu size={24} />
             </button>
             
             <form className="relative flex flex-1" action="#" method="GET" onSubmit={(e) => { e.preventDefault(); navigate(`/jobs?q=${encodeURIComponent(query)}`); }}>
               <label htmlFor="search-field" className="sr-only">Search</label>
-              <Search className="pointer-events-none absolute inset-y-0 left-0 h-full w-5 text-slate-400" aria-hidden="true" />
+              <Search className="pointer-events-none absolute inset-y-0 left-0 h-full w-5 text-gray-400 dark:text-gray-500" aria-hidden="true" />
               <input
                 id="search-field"
-                className="block h-full w-full border-0 py-0 pl-8 pr-0 text-slate-900 dark:text-white placeholder:text-slate-400 bg-transparent focus:ring-0 sm:text-sm"
+                className="block h-full w-full border-0 py-0 pl-8 pr-0 text-black dark:text-white placeholder:text-gray-400 bg-transparent focus:ring-0 sm:text-sm"
                 placeholder="Search jobs, roles, companies..."
                 type="search"
                 value={query}
@@ -130,14 +130,14 @@ export default function Layout() {
             <div className="flex items-center gap-x-4 lg:gap-x-6">
               <button 
                 onClick={() => navigate('/profile')}
-                className="-m-2.5 p-2.5 text-slate-400 hover:text-slate-500 dark:hover:text-slate-300"
+                className="-m-2.5 p-2.5 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
               >
                 <User size={20} />
               </button>
-              <div className="hidden lg:block lg:h-6 lg:w-px lg:bg-slate-200 dark:lg:bg-slate-800" aria-hidden="true" />
+              <div className="hidden lg:block lg:h-6 lg:w-px lg:bg-gray-200 dark:lg:bg-[#333]" aria-hidden="true" />
               <button 
                 onClick={logout}
-                className="-m-2.5 p-2.5 text-slate-400 hover:text-slate-500 dark:hover:text-slate-300"
+                className="-m-2.5 p-2.5 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
                 title="Log out"
               >
                 <LogOut size={20} />
