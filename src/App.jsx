@@ -3,15 +3,16 @@ import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
-import DashboardPage from "./pages/DashboardPage.tsx";
+import DashboardPage from "./pages/DashboardPage";
 import JobsPage from "./pages/JobsPage";
+import ApplicationsPage from "./pages/ApplicationsPage";
 import FitAnalyzerPage from "./pages/FitAnalyzerPage";
+import CareerPredictorPage from "./pages/CareerPredictorPage";
 import RoadmapPage from "./pages/RoadmapPage";
 import ResumeOptimizerPage from "./pages/ResumeOptimizerPage";
-import ApplicationsPage from "./pages/ApplicationsPage";
+import CoverLetterPage from "./pages/CoverLetterPage";
 import InterviewPrepPage from "./pages/InterviewPrepPage";
 import ProfilePage from "./pages/ProfilePage";
-import CoverLetterPage from "./pages/CoverLetterPage";
 
 export default function App() {
   return (
@@ -24,13 +25,15 @@ export default function App() {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/jobs" element={<JobsPage />} />
+          <Route path="/applications" element={<ApplicationsPage />} />
           <Route path="/fit" element={<FitAnalyzerPage />} />
+          <Route path="/career-predict" element={<CareerPredictorPage />} />
           <Route path="/roadmap" element={<RoadmapPage />} />
           <Route path="/resume" element={<ResumeOptimizerPage />} />
           <Route path="/cover-letter" element={<CoverLetterPage />} />
           <Route path="/interview" element={<InterviewPrepPage />} />
-          <Route path="/applications" element={<ApplicationsPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Route>
     </Routes>

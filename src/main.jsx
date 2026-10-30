@@ -6,7 +6,7 @@ import "./index.css";
 import { AuthProvider } from "./context/AuthContext";
 import { ToastProvider } from "./contexts/ToastContext";
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
+ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
       <AuthProvider>
@@ -15,5 +15,5 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         </ToastProvider>
       </AuthProvider>
     </BrowserRouter>
-  </React.StrictMode>,
+  </React.StrictMode>
 );
