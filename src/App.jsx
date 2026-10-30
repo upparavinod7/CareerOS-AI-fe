@@ -13,6 +13,7 @@ import ResumeOptimizerPage from "./pages/ResumeOptimizerPage";
 import CoverLetterPage from "./pages/CoverLetterPage";
 import InterviewPrepPage from "./pages/InterviewPrepPage";
 import ProfilePage from "./pages/ProfilePage";
+import AutoApplyPage from "./pages/AutoApplyPage";
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
         <Route element={<Layout />}>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/auto-apply" element={<AutoApplyPage />} />
           <Route path="/jobs" element={<JobsPage />} />
           <Route path="/applications" element={<ApplicationsPage />} />
           <Route path="/fit" element={<FitAnalyzerPage />} />

@@ -1,13 +1,21 @@
 // CareerOS AI - Shared Constants and Enumerations
 
 export const APPLICATION_STATUSES = [
-  "Interested",
-  "Applied",
+  "Discovered",
+  "Shortlisted",
+  "Preparing",
+  "Awaiting Approval",
+  "Ready to Submit",
+  "Submitted",
+  "Submission Failed",
   "Assessment",
   "Interview",
   "Offer",
   "Rejected",
-  "Withdrawn"
+  "Withdrawn",
+  // Legacy aliases
+  "Interested",
+  "Applied"
 ];
 
 export const EXPERIENCE_LEVELS = [

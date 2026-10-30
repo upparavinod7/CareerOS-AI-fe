@@ -35,6 +35,12 @@ const navigationSections = [
     ],
   },
   {
+    title: "AUTOMATION",
+    items: [
+      { to: "/auto-apply", label: "Auto Apply Agent", icon: Zap, badge: "NEW" },
+    ],
+  },
+  {
     title: "CAREER INTELLIGENCE",
     items: [
       { to: "/fit", label: "AI Job Analyzer", icon: Sparkles },
@@ -117,6 +123,15 @@ function SidebarContent({ closeMobile }) {
                           strokeWidth={isActive ? 2.2 : 1.8}
                         />
                         <span>{item.label}</span>
+                        {item.badge && (
+                          <span
+                            className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                              isActive ? "bg-white/20 text-white" : "bg-indigo-50 text-brand-700 border border-indigo-100"
+                            }`}
+                          >
+                            {item.badge}
+                          </span>
+                        )}
                       </>
                     )}
                   </NavLink>

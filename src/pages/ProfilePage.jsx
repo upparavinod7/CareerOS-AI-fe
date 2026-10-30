@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Briefcase,
@@ -50,6 +50,79 @@ export default function ProfilePage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
+
+  // Resume Versions State
+  const [resumesList, setResumesList] = useState([]);
+  const [loadingResumes, setLoadingResumes] = useState(false);
+  const [showAddResumeModal, setShowAddResumeModal] = useState(false);
+  const [newResumeForm, setNewResumeForm] = useState({
+    title: "",
+    targetRole: "",
+    resumeText: "",
+    skills: "",
+    isDefault: false,
+  });
+
+  const loadResumes = useCallback(async () => {
+    try {
+      setLoadingResumes(true);
+      const res = await api.listResumes();
+      setResumesList(res || []);
+    } catch {
+      // ignore
+    } finally {
+      setLoadingResumes(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "resumes") {
+      loadResumes();
+    }
+  }, [activeTab, loadResumes]);
+
+  const handleSetDefaultResume = async (id) => {
+    try {
+      await api.setDefaultResume(id);
+      success("Default resume updated!");
+      loadResumes();
+    } catch (err) {
+      showError(err.message || "Failed to set default");
+    }
+  };
+
+  const handleDeleteResume = async (id) => {
+    try {
+      await api.deleteResume(id);
+      success("Resume version removed.");
+      loadResumes();
+    } catch (err) {
+      showError(err.message || "Failed to delete resume");
+    }
+  };
+
+  const handleCreateResume = async (e) => {
+    e.preventDefault();
+    if (!newResumeForm.title || !newResumeForm.resumeText) {
+      showError("Title and resume content are required.");
+      return;
+    }
+    try {
+      await api.addResume({
+        title: newResumeForm.title,
+        targetRole: newResumeForm.targetRole,
+        resumeText: newResumeForm.resumeText,
+        skills: newResumeForm.skills.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean),
+        isDefault: newResumeForm.isDefault,
+      });
+      success("Tailored resume version saved!");
+      setShowAddResumeModal(false);
+      setNewResumeForm({ title: "", targetRole: "", resumeText: "", skills: "", isDefault: false });
+      loadResumes();
+    } catch (err) {
+      showError(err.message || "Failed to create resume version");
+    }
+  };
 
   const [saving, setSaving] = useState(false);
 
@@ -199,6 +272,14 @@ export default function ProfilePage() {
           }`}
         >
           Experience & Education
+        </button>
+        <button
+          onClick={() => setActiveTab("resumes")}
+          className={`py-1.5 px-3.5 rounded-md transition-all ${
+            activeTab === "resumes" ? "bg-brand-700 text-white shadow-xs" : "text-slate-600 hover:text-slate-900"
+          }`}
+        >
+          Resume Versions ({resumesList.length})
         </button>
         <button
           onClick={() => setActiveTab("security")}
@@ -568,7 +649,191 @@ export default function ProfilePage() {
         </form>
       )}
 
-      {/* Tab 3: Security & Password */}
+      {/* Tab 3: Multiple Tailored Resumes */}
+      {activeTab === "resumes" && (
+        <div className="space-y-6">
+          <div className="card-white p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <FileText size={16} className="text-brand-700" />
+                  Targeted Resume Versions
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Maintain distinct resume variations tailored for different roles (e.g. Frontend vs Cloud/DevOps).
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowAddResumeModal(true)}
+                className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5"
+              >
+                <Plus size={13} /> Add Version
+              </button>
+            </div>
+
+            {loadingResumes ? (
+              <div className="py-8 flex justify-center">
+                <Loader2 size={24} className="animate-spin text-brand-600" />
+              </div>
+            ) : resumesList.length === 0 ? (
+              <div className="py-8 text-center text-slate-400 text-xs">
+                No tailored versions created yet. Add one to target specific role families.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {resumesList.map((res) => (
+                  <div
+                    key={res._id}
+                    className={`p-4 rounded-xl border transition-all flex flex-col justify-between space-y-3 ${
+                      res.isDefault
+                        ? "border-brand-500 bg-indigo-50/20 shadow-xs"
+                        : "border-slate-200 bg-white hover:border-slate-300"
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-bold text-slate-900">{res.title}</span>
+                        {res.isDefault ? (
+                          <span className="badge-indigo text-[10px] font-bold">Default</span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleSetDefaultResume(res._id)}
+                            className="text-[11px] font-medium text-slate-500 hover:text-brand-700"
+                          >
+                            Set Default
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="text-[11px] text-brand-700 font-semibold mb-2">
+                        {res.targetRole || "General Role"}
+                      </div>
+
+                      <div className="text-[11px] text-slate-600 line-clamp-3 bg-slate-50 p-2 rounded font-mono">
+                        {res.resumeText}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+                      <span className="text-[10px] text-slate-400">
+                        {res.skills?.length || 0} skills tagged
+                      </span>
+
+                      {!res.isDefault && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteResume(res._id)}
+                          className="text-rose-500 hover:text-rose-700 p-1"
+                          title="Delete version"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Modal to Add Resume Version */}
+          {showAddResumeModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+              <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-lg w-full p-5 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <h4 className="text-sm font-bold text-slate-900">Add Tailored Resume Version</h4>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddResumeModal(false)}
+                    className="p-1 text-slate-400 hover:text-slate-600"
+                  >
+                    <X size={15} />
+                  </button>
+                </div>
+
+                <form onSubmit={handleCreateResume} className="space-y-3 text-xs">
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">Resume Version Title *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Cloud & DevOps Specialist"
+                      value={newResumeForm.title}
+                      onChange={(e) => setNewResumeForm((prev) => ({ ...prev, title: e.target.value }))}
+                      className="w-full border border-slate-200 rounded p-2 text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">Target Role</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. DevOps Engineer / SRE"
+                      value={newResumeForm.targetRole}
+                      onChange={(e) => setNewResumeForm((prev) => ({ ...prev, targetRole: e.target.value }))}
+                      className="w-full border border-slate-200 rounded p-2 text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">Key Skills (Comma separated)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. AWS, Terraform, Docker, Kubernetes"
+                      value={newResumeForm.skills}
+                      onChange={(e) => setNewResumeForm((prev) => ({ ...prev, skills: e.target.value }))}
+                      className="w-full border border-slate-200 rounded p-2 text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">Resume Content / Highlights *</label>
+                    <textarea
+                      rows={5}
+                      required
+                      placeholder="Paste bullet points, accomplishments, and tech stack for this role..."
+                      value={newResumeForm.resumeText}
+                      onChange={(e) => setNewResumeForm((prev) => ({ ...prev, resumeText: e.target.value }))}
+                      className="w-full border border-slate-200 rounded p-2 text-xs font-mono"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1">
+                    <input
+                      type="checkbox"
+                      id="isDefaultCheckbox"
+                      checked={newResumeForm.isDefault}
+                      onChange={(e) => setNewResumeForm((prev) => ({ ...prev, isDefault: e.target.checked }))}
+                      className="rounded border-slate-300 text-brand-600 h-4 w-4"
+                    />
+                    <label htmlFor="isDefaultCheckbox" className="font-semibold text-slate-700">
+                      Set as primary default resume
+                    </label>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddResumeModal(false)}
+                      className="btn-secondary text-xs"
+                    >
+                      Cancel
+                    </button>
+                    <button type="submit" className="btn-primary text-xs">
+                      Save Version
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab 4: Security & Password */}
       {activeTab === "security" && (
         <form onSubmit={handleChangePassword} className="card-white p-6 space-y-4 max-w-md">
           <div className="flex items-center gap-2 pb-3 border-b border-slate-100">

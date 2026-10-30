@@ -103,6 +103,72 @@ export const api = {
 
   getSavedCoverLetters: () =>
     http.get("/ai/cover-letters").then((r) => r.data.items || r.data),
+
+  // Connected Accounts & Integrations
+  getIntegrations: () =>
+    http.get("/integrations").then((r) => r.data.data || r.data),
+
+  getConnectedAccounts: () =>
+    http.get("/integrations/accounts").then((r) => r.data.data || r.data),
+
+  getConnectUrl: (provider) =>
+    http.get(`/integrations/${provider}/connect`).then((r) => r.data.data || r.data),
+
+  connectAccount: (provider, payload) =>
+    http.post(`/integrations/${provider}/callback`, payload).then((r) => r.data.data || r.data),
+
+  disconnectAccount: (provider) =>
+    http.delete(`/integrations/${provider}`).then((r) => r.data),
+
+  // Multi-Resume Versions
+  listResumes: () =>
+    http.get("/users/resumes").then((r) => r.data.data || r.data),
+
+  addResume: (payload) =>
+    http.post("/users/resumes", payload).then((r) => r.data.data || r.data),
+
+  setDefaultResume: (id) =>
+    http.patch(`/users/resumes/${id}/default`).then((r) => r.data.data || r.data),
+
+  deleteResume: (id) =>
+    http.delete(`/users/resumes/${id}`).then((r) => r.data),
+
+  // Auto Apply Agent
+  getAutoApplyOverview: () =>
+    http.get("/auto-apply/overview").then((r) => r.data.data || r.data),
+
+  getAutoApplyJobs: () =>
+    http.get("/auto-apply/jobs").then((r) => r.data.data || r.data),
+
+  getAutoApplyQueue: () =>
+    http.get("/auto-apply/queue").then((r) => r.data.data || r.data),
+
+  prepareAutoApply: (jobId) =>
+    http.post("/auto-apply/prepare", { jobId }).then((r) => r.data.data || r.data),
+
+  approveAutoApply: (id, notes) =>
+    http.post(`/auto-apply/${id}/approve`, { notes }).then((r) => r.data.data || r.data),
+
+  updateAutoApplyAnswers: (id, payload) =>
+    http.patch(`/auto-apply/${id}/answers`, payload).then((r) => r.data.data || r.data),
+
+  submitAutoApply: (id) =>
+    http.post(`/auto-apply/${id}/submit`).then((r) => r.data),
+
+  confirmGuidedAutoApply: (id, payload) =>
+    http.post(`/auto-apply/${id}/confirm-guided`, payload).then((r) => r.data.data || r.data),
+
+  rejectAutoApply: (id, reason) =>
+    http.post(`/auto-apply/${id}/reject`, { reason }).then((r) => r.data.data || r.data),
+
+  getAutoApplyHistory: () =>
+    http.get("/auto-apply/history").then((r) => r.data.data || r.data),
+
+  getAutoApplySettings: () =>
+    http.get("/auto-apply/settings").then((r) => r.data.data || r.data),
+
+  updateAutoApplySettings: (payload) =>
+    http.patch("/auto-apply/settings", payload).then((r) => r.data.data || r.data),
 };
 
 export default api;
