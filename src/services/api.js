@@ -137,8 +137,14 @@ export const api = {
   getAutoApplyOverview: () =>
     http.get("/auto-apply/overview").then((r) => r.data.data || r.data),
 
-  getAutoApplyJobs: () =>
-    http.get("/auto-apply/jobs").then((r) => r.data.data || r.data),
+  syncAutoApplyJobs: () =>
+    http.post("/auto-apply/sync").then((r) => r.data.data || r.data),
+
+  autoRunAutoApply: () =>
+    http.post("/auto-apply/auto-run").then((r) => r.data.data || r.data),
+
+  getAutoApplyJobs: (params) =>
+    http.get("/auto-apply/jobs", { params }).then((r) => r.data.data || r.data),
 
   getAutoApplyQueue: () =>
     http.get("/auto-apply/queue").then((r) => r.data.data || r.data),

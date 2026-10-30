@@ -69,6 +69,38 @@ export default function AutoApplyPage() {
   const [processingId, setProcessingId] = useState(null);
   const [copiedField, setCopiedField] = useState(null);
   const [guidedConfirmationId, setGuidedConfirmationId] = useState("");
+  const [runningAutoApply, setRunningAutoApply] = useState(false);
+  const [syncingJobs, setSyncingJobs] = useState(false);
+
+  const handleSyncJobs = async () => {
+    try {
+      setSyncingJobs(true);
+      const res = await api.syncAutoApplyJobs();
+      showSuccess(
+        `Synchronized ${res.fetched || 0} real jobs from Adzuna, JSearch, Remotive & partner feeds!`
+      );
+      await loadData();
+    } catch (err) {
+      showError(err.message || "Failed to sync real jobs");
+    } finally {
+      setSyncingJobs(false);
+    }
+  };
+
+  const handleRunAutoApply = async () => {
+    try {
+      setRunningAutoApply(true);
+      const res = await api.autoRunAutoApply();
+      showSuccess(
+        `Auto Apply completed: ${res.submittedDirectCount || 0} submitted directly, ${res.queuedCount || 0} prepared in queue.`
+      );
+      await loadData();
+    } catch (err) {
+      showError(err.message || "Auto Apply execution failed");
+    } finally {
+      setRunningAutoApply(false);
+    }
+  };
 
   const loadData = useCallback(async () => {
     try {
@@ -305,7 +337,7 @@ export default function AutoApplyPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={handleTogglePause}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold shadow-sm transition-all ${
@@ -315,15 +347,35 @@ export default function AutoApplyPage() {
             }`}
           >
             {isPaused ? <Play size={14} /> : <Pause size={14} />}
-            {isPaused ? "Agent Paused (Resume)" : "Agent Active"}
+            {isPaused ? "Agent Paused" : "Agent Active"}
           </button>
 
           <button
-            onClick={loadData}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-700 hover:bg-slate-50 shadow-sm"
+            onClick={handleSyncJobs}
+            disabled={syncingJobs}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm disabled:opacity-50"
+            title="Fetch real vacancies from Adzuna, JSearch, Remotive and feeds"
           >
-            <RefreshCw size={13} />
-            Refresh
+            {syncingJobs ? <Loader2 size={13} className="animate-spin text-brand-600" /> : <RefreshCw size={13} />}
+            {syncingJobs ? "Syncing Jobs..." : "Sync Real Jobs"}
+          </button>
+
+          <button
+            onClick={handleRunAutoApply}
+            disabled={runningAutoApply || isPaused}
+            className="btn-primary text-xs px-4 py-2 flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+          >
+            {runningAutoApply ? (
+              <>
+                <Loader2 size={13} className="animate-spin" />
+                <span>Auto-Applying...</span>
+              </>
+            ) : (
+              <>
+                <Zap size={13} />
+                <span>Run Auto Apply</span>
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -653,14 +705,31 @@ export default function AutoApplyPage() {
       {/* TAB 3: MATCHING OPPORTUNITIES */}
       {activeTab === "matching" && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <h3 className="text-sm font-bold text-slate-900">Matching Opportunities</h3>
               <p className="text-xs text-slate-500">
                 Ranked by explainable job-fit score. Minimum match threshold: {settings?.minMatchScore || 70}%.
               </p>
             </div>
-            <span className="text-xs text-slate-500 font-medium">Found {matchingJobs.length} eligible vacancies</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={handleSyncJobs}
+                disabled={syncingJobs}
+                className="btn-secondary text-xs flex items-center gap-1.5 py-1.5 px-3"
+              >
+                {syncingJobs ? <Loader2 size={12} className="animate-spin text-brand-600" /> : <RefreshCw size={12} />}
+                {syncingJobs ? "Syncing Feeds..." : "Sync Real Jobs"}
+              </button>
+              <button
+                onClick={handleRunAutoApply}
+                disabled={runningAutoApply || isPaused || matchingJobs.length === 0}
+                className="btn-primary text-xs flex items-center gap-1.5 py-1.5 px-3.5 shadow-sm disabled:opacity-50"
+              >
+                {runningAutoApply ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />}
+                Auto-Apply to All Matches
+              </button>
+            </div>
           </div>
 
           {matchingJobs.length === 0 ? (
@@ -987,17 +1056,22 @@ export default function AutoApplyPage() {
               </label>
             </div>
 
-            <div className="flex items-center gap-2 pt-1">
+            <div className="flex items-start gap-2.5 pt-2">
               <input
                 type="checkbox"
                 id="requireApprovalToggle"
                 checked={settings.requireApproval ?? true}
                 onChange={(e) => setSettings((prev) => ({ ...prev, requireApproval: e.target.checked }))}
-                className="rounded border-slate-300 text-brand-600 focus:ring-brand-500 h-4 w-4"
+                className="rounded border-slate-300 text-brand-600 focus:ring-brand-500 h-4 w-4 mt-0.5"
               />
-              <label htmlFor="requireApprovalToggle" className="text-xs font-semibold text-slate-800">
-                Always Require Explicit Candidate Approval (Recommended)
-              </label>
+              <div>
+                <label htmlFor="requireApprovalToggle" className="text-xs font-semibold text-slate-800 block">
+                  Always Require Candidate Review & Approval
+                </label>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  When checked, all applications are placed into the queue for your review. When unchecked, the agent automatically submits matching applications via direct API integrations without manual signoff.
+                </p>
+              </div>
             </div>
 
             <div className="pt-4 border-t border-slate-100">
