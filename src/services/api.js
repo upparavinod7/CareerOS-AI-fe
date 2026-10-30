@@ -86,9 +86,30 @@ export const api = {
   toggleRoadmapTask: (roadmapId, taskId) =>
     http.patch(`/ai/roadmaps/${roadmapId}/tasks/${taskId}`).then((r) => r.data),
 
-  // Resume Optimizer & ATS
+  // Resume Optimizer & ATS Intelligence
   optimizeResume: (payload) =>
     http.post("/ai/resume-optimize", payload).then((r) => r.data),
+
+  parseResumeDoc: (payload) =>
+    http.post("/ai/resume/parse", payload).then((r) => r.data),
+
+  qualityCheckResume: (resume) =>
+    http.post("/ai/resume/quality-check", { resume }).then((r) => r.data),
+
+  scoreATSCompatibility: (payload) =>
+    http.post("/ai/resume/ats-score", payload).then((r) => r.data),
+
+  optimizeResumeIntelligence: (payload) =>
+    http.post("/ai/resume/optimize", payload).then((r) => r.data),
+
+  generateResumePDF: (resume) =>
+    http.post("/ai/resume/generate-pdf", { resume }, { responseType: "blob" }).then((r) => r.data),
+
+  validateResumePDF: (resume) =>
+    http.post("/ai/resume/validate-pdf", { resume }).then((r) => r.data),
+
+  getSavedResumeAudits: () =>
+    http.get("/ai/resume/saved").then((r) => r.data.items || r.data),
 
   // Interview Preparation
   interviewGuidance: (payload) =>
