@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -72,46 +72,49 @@ export default function JobsPage() {
     }
   }, [user?.savedJobs]);
 
-  const loadJobs = async (pageNumber = 1) => {
-    try {
-      setLoading(true);
+  const loadJobs = useCallback(
+    async (pageNumber = 1) => {
+      try {
+        setLoading(true);
 
-      if (viewSavedOnly) {
-        const savedRes = await api.getSavedJobs();
-        setJobs(savedRes || []);
-        setTotal((savedRes || []).length);
-        setPage(1);
-        setTotalPages(1);
-      } else {
-        const params = {
-          page: pageNumber,
-          limit: 10,
-          sort: sortBy,
-        };
-        if (query.trim()) params.q = query.trim();
-        if (locationFilter.trim()) params.location = locationFilter.trim();
-        if (workTypeFilter !== "All") params.workType = workTypeFilter;
-        if (roleFilter !== "All") params.role = roleFilter;
+        if (viewSavedOnly) {
+          const savedRes = await api.getSavedJobs();
+          setJobs(savedRes || []);
+          setTotal((savedRes || []).length);
+          setPage(1);
+          setTotalPages(1);
+        } else {
+          const params = {
+            page: pageNumber,
+            limit: 10,
+            sort: sortBy,
+          };
+          if (query.trim()) params.q = query.trim();
+          if (locationFilter.trim()) params.location = locationFilter.trim();
+          if (workTypeFilter !== "All") params.workType = workTypeFilter;
+          if (roleFilter !== "All") params.role = roleFilter;
 
-        const res = await api.searchJobs(params);
-        setJobs(res.items || []);
-        setTotal(res.total || 0);
-        setPage(res.page || 1);
-        setTotalPages(res.totalPages || 1);
-        if (res.realtime?.sync) {
-          setSyncStatus(res.realtime.sync);
+          const res = await api.searchJobs(params);
+          setJobs(res.items || []);
+          setTotal(res.total || 0);
+          setPage(res.page || 1);
+          setTotalPages(res.totalPages || 1);
+          if (res.realtime?.sync) {
+            setSyncStatus(res.realtime.sync);
+          }
         }
+      } catch (err) {
+        showError(err.message || "Failed to load jobs");
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      showError(err.message || "Failed to load jobs");
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [viewSavedOnly, sortBy, query, locationFilter, workTypeFilter, roleFilter, showError]
+  );
 
   useEffect(() => {
     loadJobs(1);
-  }, [workTypeFilter, roleFilter, sortBy, viewSavedOnly]);
+  }, [loadJobs]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();

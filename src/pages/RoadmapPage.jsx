@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -50,24 +50,24 @@ export default function RoadmapPage() {
   const [loading, setLoading] = useState(false);
   const [loadingRoadmaps, setLoadingRoadmaps] = useState(true);
 
-  const loadSavedRoadmaps = async () => {
+  const loadSavedRoadmaps = useCallback(async () => {
     try {
       setLoadingRoadmaps(true);
       const res = await api.getRoadmaps();
       setSavedRoadmaps(res || []);
-      if (res?.length > 0 && !activeRoadmap) {
-        setActiveRoadmap(res[0]);
+      if (res?.length > 0) {
+        setActiveRoadmap((prev) => prev || res[0]);
       }
     } catch (err) {
       console.error("Failed to load saved roadmaps", err);
     } finally {
       setLoadingRoadmaps(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadSavedRoadmaps();
-  }, []);
+  }, [loadSavedRoadmaps]);
 
   useEffect(() => {
     if (urlRole) {

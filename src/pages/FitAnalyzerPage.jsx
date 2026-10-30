@@ -62,8 +62,8 @@ export default function FitAnalyzerPage() {
         if (urlJobId) {
           setSelectedJobId(urlJobId);
           setMode("job");
-        } else if (res.items?.length > 0 && !selectedJobId) {
-          setSelectedJobId(res.items[0]._id);
+        } else if (res.items?.length > 0) {
+          setSelectedJobId((prev) => prev || res.items[0]._id);
         }
       })
       .catch(() => {});

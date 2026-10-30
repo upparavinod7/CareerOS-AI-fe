@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Briefcase,
@@ -50,32 +50,33 @@ export default function ApplicationsPage() {
   });
   const [submitting, setSubmitting] = useState(false);
 
-  const loadApplications = async () => {
+  const loadApplications = useCallback(async (queryParam) => {
     try {
       setLoading(true);
+      const q = typeof queryParam === "string" ? queryParam : searchQuery;
       const [apps, jobsRes] = await Promise.all([
-        api.listApplications({ status: statusFilter, q: searchQuery }),
+        api.listApplications({ status: statusFilter, q }),
         api.searchJobs({ page: 1, limit: 30, sort: "recent" }),
       ]);
       setItems(apps || []);
       setJobs(jobsRes.items || []);
-      if (jobsRes.items?.length > 0 && !selectedJobId) {
-        setSelectedJobId(jobsRes.items[0]._id);
+      if (jobsRes.items?.length > 0) {
+        setSelectedJobId((prev) => prev || jobsRes.items[0]._id);
       }
     } catch (err) {
       showError(err.message || "Failed to load application tracker");
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter, searchQuery, showError]);
 
   useEffect(() => {
     loadApplications();
-  }, [statusFilter]);
+  }, [statusFilter, loadApplications]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    loadApplications();
+    loadApplications(searchQuery);
   };
 
   const handleStatusChange = async (appId, newStatus) => {
