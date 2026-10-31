@@ -1,7 +1,14 @@
 import axios from "axios";
 
+// Resolve API base URL, safely defaulting to port 5000 if not configured or if legacy port 5001 was specified
+const envBase = import.meta.env.VITE_API_BASE_URL;
+const baseURL =
+  envBase && !envBase.includes("5001")
+    ? envBase
+    : "http://localhost:5000/api/v1";
+
 const http = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "/api/v1",
+  baseURL,
   timeout: 20000,
 });
 
