@@ -185,6 +185,9 @@ export const api = {
   confirmGuidedAutoApply: (id, payload) =>
     http.post(`/auto-apply/${id}/confirm-guided`, payload).then((r) => r.data.data || r.data),
 
+  retryAutoApply: (id) =>
+    http.post(`/auto-apply/${id}/retry`).then((r) => r.data),
+
   rejectAutoApply: (id, reason) =>
     http.post(`/auto-apply/${id}/reject`, { reason }).then((r) => r.data.data || r.data),
 

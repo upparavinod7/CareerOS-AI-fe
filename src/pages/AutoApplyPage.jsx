@@ -13,6 +13,7 @@ import {
   Clock,
   Compass,
   Copy,
+  Download,
   ExternalLink,
   Eye,
   FileCheck,
@@ -63,7 +64,11 @@ export default function AutoApplyPage() {
   const [reviewModalApp, setReviewModalApp] = useState(null);
   const [guidedModalData, setGuidedModalData] = useState(null);
   const [connectModalProvider, setConnectModalProvider] = useState(null);
-  const [connectForm, setConnectForm] = useState({ boardToken: "", site: "", apiKey: "" });
+  const [connectForm, setConnectForm] = useState({
+    boardToken: "",
+    site: "",
+    apiKey: "",
+  });
 
   // Action states
   const [processingId, setProcessingId] = useState(null);
@@ -77,7 +82,7 @@ export default function AutoApplyPage() {
       setSyncingJobs(true);
       const res = await api.syncAutoApplyJobs();
       showSuccess(
-        `Synchronized ${res.fetched || 0} real jobs from Adzuna, JSearch, Remotive & partner feeds!`
+        `Synchronized ${res.fetched || 0} real jobs from Adzuna, JSearch, Remotive & partner feeds!`,
       );
       await loadData();
     } catch (err) {
@@ -92,7 +97,7 @@ export default function AutoApplyPage() {
       setRunningAutoApply(true);
       const res = await api.autoRunAutoApply();
       showSuccess(
-        `Auto Apply completed: ${res.submittedDirectCount || 0} submitted directly, ${res.queuedCount || 0} prepared in queue.`
+        `Auto Apply completed: ${res.submittedDirectCount || 0} submitted directly, ${res.queuedCount || 0} prepared in queue.`,
       );
       await loadData();
     } catch (err) {
@@ -105,16 +110,17 @@ export default function AutoApplyPage() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [ovRes, intRes, accRes, jobsRes, qRes, histRes, setRes, resRes] = await Promise.all([
-        api.getAutoApplyOverview().catch(() => null),
-        api.getIntegrations().catch(() => []),
-        api.getConnectedAccounts().catch(() => []),
-        api.getAutoApplyJobs().catch(() => []),
-        api.getAutoApplyQueue().catch(() => []),
-        api.getAutoApplyHistory().catch(() => []),
-        api.getAutoApplySettings().catch(() => null),
-        api.listResumes().catch(() => []),
-      ]);
+      const [ovRes, intRes, accRes, jobsRes, qRes, histRes, setRes, resRes] =
+        await Promise.all([
+          api.getAutoApplyOverview().catch(() => null),
+          api.getIntegrations().catch(() => []),
+          api.getConnectedAccounts().catch(() => []),
+          api.getAutoApplyJobs().catch(() => []),
+          api.getAutoApplyQueue().catch(() => []),
+          api.getAutoApplyHistory().catch(() => []),
+          api.getAutoApplySettings().catch(() => null),
+          api.listResumes().catch(() => []),
+        ]);
 
       setOverview(ovRes);
       setIntegrations(intRes || []);
@@ -151,7 +157,9 @@ export default function AutoApplyPage() {
       const nextPaused = !settings.isPaused;
       await api.updateAutoApplySettings({ isPaused: nextPaused });
       setSettings((prev) => ({ ...prev, isPaused: nextPaused }));
-      showSuccess(nextPaused ? "Auto Apply agent paused." : "Auto Apply agent active.");
+      showSuccess(
+        nextPaused ? "Auto Apply agent paused." : "Auto Apply agent active.",
+      );
     } catch (err) {
       showError(err.message || "Failed to update status");
     }
@@ -165,7 +173,11 @@ export default function AutoApplyPage() {
       showSuccess("Application package prepared and added to queue!");
       setQueue((prev) => [newApp, ...prev]);
       setMatchingJobs((prev) =>
-        prev.map((j) => (j._id === jobId ? { ...j, hasApplied: true, applicationStatus: "Awaiting Approval" } : j))
+        prev.map((j) =>
+          j._id === jobId
+            ? { ...j, hasApplied: true, applicationStatus: "Awaiting Approval" }
+            : j,
+        ),
       );
       setReviewModalApp(newApp);
     } catch (err) {
@@ -179,7 +191,10 @@ export default function AutoApplyPage() {
   const handleApprove = async (appId) => {
     try {
       setProcessingId(appId);
-      const updated = await api.approveAutoApply(appId, "Approved by candidate");
+      const updated = await api.approveAutoApply(
+        appId,
+        "Approved by candidate",
+      );
       showSuccess("Application approved and ready to submit!");
       setQueue((prev) => prev.map((a) => (a._id === appId ? updated : a)));
       if (reviewModalApp && reviewModalApp._id === appId) {
@@ -214,7 +229,9 @@ export default function AutoApplyPage() {
       const res = await api.submitAutoApply(app._id);
 
       if (res.submissionMethod === "direct") {
-        showSuccess("Direct application submitted successfully via official integration!");
+        showSuccess(
+          "Direct application submitted successfully via official integration!",
+        );
         setQueue((prev) => prev.filter((a) => a._id !== app._id));
         setHistoryList((prev) => [res.data, ...prev]);
         setReviewModalApp(null);
@@ -238,12 +255,17 @@ export default function AutoApplyPage() {
     if (!guidedModalData) return;
     try {
       setProcessingId(guidedModalData.application._id);
-      const updated = await api.confirmGuidedAutoApply(guidedModalData.application._id, {
-        confirmationId: guidedConfirmationId.trim() || undefined,
-        notes: "Guided application submitted by candidate",
-      });
+      const updated = await api.confirmGuidedAutoApply(
+        guidedModalData.application._id,
+        {
+          confirmationId: guidedConfirmationId.trim() || undefined,
+          notes: "Guided application submitted by candidate",
+        },
+      );
       showSuccess("External application submission recorded!");
-      setQueue((prev) => prev.filter((a) => a._id !== guidedModalData.application._id));
+      setQueue((prev) =>
+        prev.filter((a) => a._id !== guidedModalData.application._id),
+      );
       setHistoryList((prev) => [updated, ...prev]);
       setGuidedModalData(null);
       setGuidedConfirmationId("");
@@ -251,6 +273,48 @@ export default function AutoApplyPage() {
       showError(err.message || "Failed to confirm submission");
     } finally {
       setProcessingId(null);
+    }
+  };
+
+  // Retry Failed Application
+  const handleRetry = async (appId) => {
+    try {
+      setProcessingId(appId);
+      await api.retryAutoApply(appId);
+      showSuccess("Application re-queued for submission retry!");
+      await loadData();
+    } catch (err) {
+      showError(err.message || "Failed to retry application");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  // Download Tailored Resume PDF
+  const handleDownloadApplicationResume = (app) => {
+    if (app?.generatedPdfBase64) {
+      try {
+        const byteCharacters = atob(app.generatedPdfBase64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: "application/pdf" });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${(app.jobTitle || "Resume").replace(/[^a-zA-Z0-9]/g, "_")}_ATS.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+        showSuccess("Downloaded tailored ATS Resume PDF!");
+      } catch (e) {
+        showError("Failed to decode PDF: " + e.message);
+      }
+    } else {
+      showError("ATS Resume PDF not generated for this application.");
     }
   };
 
@@ -285,7 +349,10 @@ export default function AutoApplyPage() {
   const handleSaveCredentials = async () => {
     if (!connectModalProvider) return;
     try {
-      const res = await api.connectAccount(connectModalProvider.providerId, connectForm);
+      const res = await api.connectAccount(
+        connectModalProvider.providerId,
+        connectForm,
+      );
       showSuccess(`${connectModalProvider.providerName} credentials saved!`);
       setConnectedAccounts((prev) => [
         ...prev.filter((a) => a.provider !== connectModalProvider.providerId),
@@ -301,7 +368,9 @@ export default function AutoApplyPage() {
     try {
       await api.disconnectAccount(providerId);
       showSuccess(`Disconnected ${providerId} account.`);
-      setConnectedAccounts((prev) => prev.filter((a) => a.provider !== providerId));
+      setConnectedAccounts((prev) =>
+        prev.filter((a) => a.provider !== providerId),
+      );
     } catch (err) {
       showError(err.message || "Disconnect failed");
     }
@@ -318,7 +387,10 @@ export default function AutoApplyPage() {
   const isPaused = settings?.isPaused ?? false;
   const submittedToday = overview?.dailyProgress?.submittedToday || 0;
   const dailyTarget = overview?.dailyProgress?.dailyTarget || 10;
-  const targetPct = Math.min(100, Math.round((submittedToday / dailyTarget) * 100));
+  const targetPct = Math.min(
+    100,
+    Math.round((submittedToday / dailyTarget) * 100),
+  );
 
   return (
     <div className="space-y-6">
@@ -326,14 +398,17 @@ export default function AutoApplyPage() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Auto Apply Agent</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+              Auto Apply Agent
+            </h1>
             <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 border border-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-brand-700">
               <Sparkles size={12} />
               Multi-Platform
             </span>
           </div>
           <p className="mt-1 text-sm text-slate-500">
-            Intelligently prepare tailored applications, verify questions, and submit via authorized APIs or guided workflows.
+            Intelligently prepare tailored applications, verify questions, and
+            submit via authorized APIs or guided workflows.
           </p>
         </div>
 
@@ -356,7 +431,11 @@ export default function AutoApplyPage() {
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm disabled:opacity-50"
             title="Fetch real vacancies from Adzuna, JSearch, Remotive and feeds"
           >
-            {syncingJobs ? <Loader2 size={13} className="animate-spin text-brand-600" /> : <RefreshCw size={13} />}
+            {syncingJobs ? (
+              <Loader2 size={13} className="animate-spin text-brand-600" />
+            ) : (
+              <RefreshCw size={13} />
+            )}
             {syncingJobs ? "Syncing Jobs..." : "Sync Real Jobs"}
           </button>
 
@@ -387,7 +466,9 @@ export default function AutoApplyPage() {
             <Zap size={20} />
           </div>
           <div>
-            <div className="text-xs font-medium text-slate-500">Daily Submission Target</div>
+            <div className="text-xs font-medium text-slate-500">
+              Daily Submission Target
+            </div>
             <div className="text-base font-bold text-slate-900">
               {submittedToday} of {dailyTarget} Applications Today
             </div>
@@ -417,11 +498,36 @@ export default function AutoApplyPage() {
       <div className="flex items-center gap-1 border-b border-slate-200 overflow-x-auto pb-px">
         {[
           { id: "overview", label: "Overview", icon: Layers, count: null },
-          { id: "queue", label: "Application Queue", icon: Clock, count: queue.length },
-          { id: "matching", label: "Matching Opportunities", icon: Sparkles, count: matchingJobs.length },
-          { id: "accounts", label: "Connected Accounts", icon: Link2, count: connectedAccounts.length },
-          { id: "history", label: "Submission History", icon: History, count: historyList.length },
-          { id: "settings", label: "Automation Settings", icon: Sliders, count: null },
+          {
+            id: "queue",
+            label: "Application Queue",
+            icon: Clock,
+            count: queue.length,
+          },
+          {
+            id: "matching",
+            label: "Matching Opportunities",
+            icon: Sparkles,
+            count: matchingJobs.length,
+          },
+          {
+            id: "accounts",
+            label: "Connected Accounts",
+            icon: Link2,
+            count: connectedAccounts.length,
+          },
+          {
+            id: "history",
+            label: "Submission History",
+            icon: History,
+            count: historyList.length,
+          },
+          {
+            id: "settings",
+            label: "Automation Settings",
+            icon: Sliders,
+            count: null,
+          },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -440,7 +546,9 @@ export default function AutoApplyPage() {
               {typeof tab.count === "number" && tab.count > 0 && (
                 <span
                   className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                    isActive ? "bg-brand-100 text-brand-800" : "bg-slate-100 text-slate-600"
+                    isActive
+                      ? "bg-brand-100 text-brand-800"
+                      : "bg-slate-100 text-slate-600"
                   }`}
                 >
                   {tab.count}
@@ -456,19 +564,53 @@ export default function AutoApplyPage() {
         <div className="space-y-6">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {[
-              { label: "Discovered Vacancies", val: overview?.totalDiscovered || 0, icon: Briefcase, color: "text-slate-700" },
-              { label: "Shortlisted", val: overview?.shortlisted || 0, icon: Sparkles, color: "text-indigo-600" },
-              { label: "Awaiting Review", val: overview?.awaitingApproval || 0, icon: Clock, color: "text-amber-600" },
-              { label: "Ready to Submit", val: overview?.readyToSubmit || 0, icon: Send, color: "text-blue-600" },
-              { label: "Submitted", val: overview?.submitted || 0, icon: CheckCircle2, color: "text-emerald-600" },
-              { label: "Interviews & Offers", val: (overview?.interviews || 0) + (overview?.offers || 0), icon: FileCheck, color: "text-purple-600" },
+              {
+                label: "Discovered Vacancies",
+                val: overview?.totalDiscovered || 0,
+                icon: Briefcase,
+                color: "text-slate-700",
+              },
+              {
+                label: "Shortlisted",
+                val: overview?.shortlisted || 0,
+                icon: Sparkles,
+                color: "text-indigo-600",
+              },
+              {
+                label: "Awaiting Review",
+                val: overview?.awaitingApproval || 0,
+                icon: Clock,
+                color: "text-amber-600",
+              },
+              {
+                label: "Ready to Submit",
+                val: overview?.readyToSubmit || 0,
+                icon: Send,
+                color: "text-blue-600",
+              },
+              {
+                label: "Submitted",
+                val: overview?.submitted || 0,
+                icon: CheckCircle2,
+                color: "text-emerald-600",
+              },
+              {
+                label: "Interviews & Offers",
+                val: (overview?.interviews || 0) + (overview?.offers || 0),
+                icon: FileCheck,
+                color: "text-purple-600",
+              },
             ].map((kpi, i) => (
               <div key={i} className="card-white p-3.5">
                 <div className="flex items-center justify-between text-slate-400 mb-1.5">
-                  <span className="text-[11px] font-medium text-slate-500 truncate">{kpi.label}</span>
+                  <span className="text-[11px] font-medium text-slate-500 truncate">
+                    {kpi.label}
+                  </span>
                   <kpi.icon size={14} className={kpi.color} />
                 </div>
-                <div className={`text-xl font-bold ${kpi.color}`}>{kpi.val}</div>
+                <div className={`text-xl font-bold ${kpi.color}`}>
+                  {kpi.val}
+                </div>
               </div>
             ))}
           </div>
@@ -478,8 +620,13 @@ export default function AutoApplyPage() {
             <div className="lg:col-span-2 card-white p-5 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">Prepared Applications Awaiting Review</h3>
-                  <p className="text-xs text-slate-500">Review tailored resumes and screening answers before submission</p>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    Prepared Applications Awaiting Review
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Review tailored resumes and screening answers before
+                    submission
+                  </p>
                 </div>
                 <button
                   onClick={() => setActiveTab("queue")}
@@ -492,8 +639,13 @@ export default function AutoApplyPage() {
               {queue.length === 0 ? (
                 <div className="py-10 text-center border border-dashed border-slate-200 rounded-lg">
                   <Bot size={28} className="mx-auto text-slate-300 mb-2" />
-                  <p className="text-xs font-medium text-slate-600">Your application queue is clear</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Explore matching vacancies below to prepare tailored applications.</p>
+                  <p className="text-xs font-medium text-slate-600">
+                    Your application queue is clear
+                  </p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Explore matching vacancies below to prepare tailored
+                    applications.
+                  </p>
                   <button
                     onClick={() => setActiveTab("matching")}
                     className="mt-3 btn-secondary text-xs inline-flex items-center gap-1"
@@ -510,7 +662,9 @@ export default function AutoApplyPage() {
                     >
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-slate-900">{item.jobTitle}</span>
+                          <span className="text-xs font-bold text-slate-900">
+                            {item.jobTitle}
+                          </span>
                           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-brand-700">
                             {item.platform}
                           </span>
@@ -529,7 +683,9 @@ export default function AutoApplyPage() {
                           <span>•</span>
                           <span>{item.location || "Remote"}</span>
                           <span>•</span>
-                          <span className="font-semibold text-brand-600">{item.matchScore}% Fit</span>
+                          <span className="font-semibold text-brand-600">
+                            {item.matchScore}% Fit
+                          </span>
                         </div>
                       </div>
 
@@ -569,24 +725,50 @@ export default function AutoApplyPage() {
                 <span>Candidate Safety & Compliance</span>
               </div>
               <p className="text-xs text-slate-600 leading-relaxed">
-                CareerOS complies strictly with external platform terms, OAuth permission scopes, and candidate protection standards:
+                CareerOS complies strictly with external platform terms, OAuth
+                permission scopes, and candidate protection standards:
               </p>
               <ul className="space-y-2 text-xs text-slate-600">
                 <li className="flex items-start gap-2">
-                  <Check size={14} className="text-emerald-600 shrink-0 mt-0.5" />
-                  <span><strong>Zero Password Storage:</strong> We never ask for or store your LinkedIn or Indeed passwords.</span>
+                  <Check
+                    size={14}
+                    className="text-emerald-600 shrink-0 mt-0.5"
+                  />
+                  <span>
+                    <strong>Zero Password Storage:</strong> We never ask for or
+                    store your LinkedIn or Indeed passwords.
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <Check size={14} className="text-emerald-600 shrink-0 mt-0.5" />
-                  <span><strong>Transparent Capabilities:</strong> Direct submissions are only executed on authorized ATS APIs (Greenhouse/Lever).</span>
+                  <Check
+                    size={14}
+                    className="text-emerald-600 shrink-0 mt-0.5"
+                  />
+                  <span>
+                    <strong>Transparent Capabilities:</strong> Direct
+                    submissions are only executed on authorized ATS APIs
+                    (Greenhouse/Lever).
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <Check size={14} className="text-emerald-600 shrink-0 mt-0.5" />
-                  <span><strong>Guided Fallback:</strong> Compliant side-by-side assistant for external platform applications.</span>
+                  <Check
+                    size={14}
+                    className="text-emerald-600 shrink-0 mt-0.5"
+                  />
+                  <span>
+                    <strong>Guided Fallback:</strong> Compliant side-by-side
+                    assistant for external platform applications.
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <Check size={14} className="text-emerald-600 shrink-0 mt-0.5" />
-                  <span><strong>Encrypted at Rest:</strong> OAuth tokens are AES-256-GCM encrypted in the database.</span>
+                  <Check
+                    size={14}
+                    className="text-emerald-600 shrink-0 mt-0.5"
+                  />
+                  <span>
+                    <strong>Encrypted at Rest:</strong> OAuth tokens are
+                    AES-256-GCM encrypted in the database.
+                  </span>
                 </li>
               </ul>
               <div className="pt-2">
@@ -599,6 +781,90 @@ export default function AutoApplyPage() {
               </div>
             </div>
           </div>
+
+          {/* Platform Execution Status Breakdown */}
+          {overview?.platformBreakdown && Object.keys(overview.platformBreakdown).length > 0 && (
+            <div className="card-white p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    Platform Execution Status Breakdown
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Transparent reporting of direct API submissions vs guided applications across platforms
+                  </p>
+                </div>
+                <span className="text-[11px] font-semibold text-slate-400">
+                  Mode: {overview.queueMode || "Active Pipeline"}
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
+                    <tr>
+                      <th className="py-2.5 px-3">Platform</th>
+                      <th className="py-2.5 px-3">Total Processed</th>
+                      <th className="py-2.5 px-3">Direct Submitted</th>
+                      <th className="py-2.5 px-3">Guided / Manual Action</th>
+                      <th className="py-2.5 px-3">Failed</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {Object.entries(overview.platformBreakdown).map(([platformName, stat]) => (
+                      <tr key={platformName} className="hover:bg-slate-50/50">
+                        <td className="py-2 px-3 font-semibold text-slate-800">{platformName}</td>
+                        <td className="py-2 px-3 text-slate-600">{stat.total || 0}</td>
+                        <td className="py-2 px-3 font-semibold text-emerald-600">{stat.submitted || 0}</td>
+                        <td className="py-2 px-3 text-amber-600">{stat.guided || 0}</td>
+                        <td className="py-2 px-3 text-rose-600">{stat.failed || 0}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Recent Failures & Instant Retry */}
+          {overview?.recentFailures && overview.recentFailures.length > 0 && (
+            <div className="card-white p-5 space-y-3 border-l-4 border-l-rose-500">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <AlertCircle size={16} className="text-rose-600" />
+                    Failed Application Submissions ({overview.recentFailures.length})
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Specific platform rejection reasons identified. Re-queue eligible applications with one click.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {overview.recentFailures.slice(0, 5).map((fail, idx) => (
+                  <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg bg-rose-50/50 border border-rose-100 gap-2">
+                    <div className="text-xs">
+                      <p className="font-bold text-slate-900">
+                        {fail.jobTitle} &bull; <span className="text-slate-600">{fail.company}</span>
+                      </p>
+                      <p className="text-[11px] text-rose-700 mt-0.5 font-mono">
+                        Reason: {fail.reason}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleRetry(fail.applicationId)}
+                      disabled={processingId === fail.applicationId}
+                      className="px-3 py-1.5 rounded bg-white hover:bg-slate-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-1.5 shrink-0 self-start sm:self-auto"
+                    >
+                      {processingId === fail.applicationId ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                      Retry Submission
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -607,19 +873,29 @@ export default function AutoApplyPage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-bold text-slate-900">Supported Platforms & ATS Integrations</h3>
-              <p className="text-xs text-slate-500">Each provider explicitly declares supported capabilities and connection methods.</p>
+              <h3 className="text-sm font-bold text-slate-900">
+                Supported Platforms & ATS Integrations
+              </h3>
+              <p className="text-xs text-slate-500">
+                Each provider explicitly declares supported capabilities and
+                connection methods.
+              </p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {integrations.map((provider) => {
               const connected = connectedAccounts.find(
-                (a) => a.provider === provider.providerId && a.status === "connected"
+                (a) =>
+                  a.provider === provider.providerId &&
+                  a.status === "connected",
               );
 
               return (
-                <div key={provider.providerId} className="card-white p-5 flex flex-col justify-between space-y-4">
+                <div
+                  key={provider.providerId}
+                  className="card-white p-5 flex flex-col justify-between space-y-4"
+                >
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
@@ -627,7 +903,9 @@ export default function AutoApplyPage() {
                           <Building2 size={18} />
                         </div>
                         <div>
-                          <h4 className="text-xs font-bold text-slate-900">{provider.providerName}</h4>
+                          <h4 className="text-xs font-bold text-slate-900">
+                            {provider.providerName}
+                          </h4>
                           <span className="text-[10px] text-slate-500 uppercase tracking-wide">
                             {provider.authType.replace(/_/g, " ")}
                           </span>
@@ -645,31 +923,51 @@ export default function AutoApplyPage() {
                       </span>
                     </div>
 
-                    <p className="text-xs text-slate-500 leading-relaxed">{provider.disclaimer}</p>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      {provider.disclaimer}
+                    </p>
 
                     {/* Capabilities Badge Grid */}
                     <div className="border-t border-slate-100 pt-3 space-y-1.5">
-                      <div className="text-[11px] font-semibold text-slate-700 mb-1">Declared Capabilities:</div>
+                      <div className="text-[11px] font-semibold text-slate-700 mb-1">
+                        Declared Capabilities:
+                      </div>
                       <div className="grid grid-cols-2 gap-1.5 text-[10px]">
                         <span className="flex items-center gap-1 text-slate-600">
-                          {provider.authentication ? <Check size={12} className="text-emerald-600" /> : <X size={12} className="text-slate-400" />}
+                          {provider.authentication ? (
+                            <Check size={12} className="text-emerald-600" />
+                          ) : (
+                            <X size={12} className="text-slate-400" />
+                          )}
                           Auth / OAuth
                         </span>
                         <span className="flex items-center gap-1 text-slate-600">
-                          {provider.jobDiscovery ? <Check size={12} className="text-emerald-600" /> : <X size={12} className="text-slate-400" />}
+                          {provider.jobDiscovery ? (
+                            <Check size={12} className="text-emerald-600" />
+                          ) : (
+                            <X size={12} className="text-slate-400" />
+                          )}
                           Job Discovery
                         </span>
                         <span className="flex items-center gap-1 text-slate-600">
-                          {provider.applicationPreparation ? <Check size={12} className="text-emerald-600" /> : <X size={12} className="text-slate-400" />}
+                          {provider.applicationPreparation ? (
+                            <Check size={12} className="text-emerald-600" />
+                          ) : (
+                            <X size={12} className="text-slate-400" />
+                          )}
                           AI Prep Drafts
                         </span>
                         <span className="flex items-center gap-1 text-slate-600">
                           {provider.applicationSubmission ? (
                             <Check size={12} className="text-emerald-600" />
                           ) : (
-                            <span className="text-amber-600 font-semibold">Guided Assistant</span>
+                            <span className="text-amber-600 font-semibold">
+                              Guided Assistant
+                            </span>
                           )}
-                          {provider.applicationSubmission ? "Direct API Submit" : ""}
+                          {provider.applicationSubmission
+                            ? "Direct API Submit"
+                            : ""}
                         </span>
                       </div>
                     </div>
@@ -689,7 +987,8 @@ export default function AutoApplyPage() {
                         className="btn-primary text-xs w-full py-1.5 flex items-center justify-center gap-1.5"
                       >
                         <Link2 size={13} />
-                        {provider.providerId === "greenhouse" || provider.providerId === "lever"
+                        {provider.providerId === "greenhouse" ||
+                        provider.providerId === "lever"
                           ? "Configure Credentials"
                           : "Connect Account"}
                       </button>
@@ -707,9 +1006,12 @@ export default function AutoApplyPage() {
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <h3 className="text-sm font-bold text-slate-900">Matching Opportunities</h3>
+              <h3 className="text-sm font-bold text-slate-900">
+                Matching Opportunities
+              </h3>
               <p className="text-xs text-slate-500">
-                Ranked by explainable job-fit score. Minimum match threshold: {settings?.minMatchScore || 70}%.
+                Ranked by explainable job-fit score. Minimum match threshold:{" "}
+                {settings?.minMatchScore || 70}%.
               </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -718,15 +1020,25 @@ export default function AutoApplyPage() {
                 disabled={syncingJobs}
                 className="btn-secondary text-xs flex items-center gap-1.5 py-1.5 px-3"
               >
-                {syncingJobs ? <Loader2 size={12} className="animate-spin text-brand-600" /> : <RefreshCw size={12} />}
+                {syncingJobs ? (
+                  <Loader2 size={12} className="animate-spin text-brand-600" />
+                ) : (
+                  <RefreshCw size={12} />
+                )}
                 {syncingJobs ? "Syncing Feeds..." : "Sync Real Jobs"}
               </button>
               <button
                 onClick={handleRunAutoApply}
-                disabled={runningAutoApply || isPaused || matchingJobs.length === 0}
+                disabled={
+                  runningAutoApply || isPaused || matchingJobs.length === 0
+                }
                 className="btn-primary text-xs flex items-center gap-1.5 py-1.5 px-3.5 shadow-sm disabled:opacity-50"
               >
-                {runningAutoApply ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />}
+                {runningAutoApply ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : (
+                  <Zap size={12} />
+                )}
                 Auto-Apply to All Matches
               </button>
             </div>
@@ -735,9 +1047,17 @@ export default function AutoApplyPage() {
           {matchingJobs.length === 0 ? (
             <div className="py-12 card-white text-center">
               <Sparkles size={32} className="mx-auto text-slate-300 mb-2" />
-              <p className="text-xs font-medium text-slate-700">No jobs meet your current filter threshold</p>
-              <p className="text-[11px] text-slate-400 mt-1">Try adjusting your target roles or lowering minimum match score in Settings.</p>
-              <button onClick={() => setActiveTab("settings")} className="mt-3 btn-secondary text-xs">
+              <p className="text-xs font-medium text-slate-700">
+                No jobs meet your current filter threshold
+              </p>
+              <p className="text-[11px] text-slate-400 mt-1">
+                Try adjusting your target roles or lowering minimum match score
+                in Settings.
+              </p>
+              <button
+                onClick={() => setActiveTab("settings")}
+                className="mt-3 btn-secondary text-xs"
+              >
                 Adjust Filters
               </button>
             </div>
@@ -750,9 +1070,15 @@ export default function AutoApplyPage() {
                 >
                   <div className="space-y-2 max-w-2xl">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-bold text-slate-900">{job.title}</span>
-                      <span className="text-xs font-medium text-slate-600">{job.company}</span>
-                      <span className="badge-indigo text-[10px]">{job.workType || "Remote"}</span>
+                      <span className="text-sm font-bold text-slate-900">
+                        {job.title}
+                      </span>
+                      <span className="text-xs font-medium text-slate-600">
+                        {job.company}
+                      </span>
+                      <span className="badge-indigo text-[10px]">
+                        {job.workType || "Remote"}
+                      </span>
                       <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
                         {job.matchScore}% Match
                       </span>
@@ -764,25 +1090,41 @@ export default function AutoApplyPage() {
                       </span>
                       {job.salary && (
                         <span>
-                          {job.salary.min ? `$${job.salary.min.toLocaleString()}` : ""} -{" "}
-                          {job.salary.max ? `$${job.salary.max.toLocaleString()}` : ""} {job.salary.currency || "USD"}
+                          {job.salary.min
+                            ? `$${job.salary.min.toLocaleString()}`
+                            : ""}{" "}
+                          -{" "}
+                          {job.salary.max
+                            ? `$${job.salary.max.toLocaleString()}`
+                            : ""}{" "}
+                          {job.salary.currency || "USD"}
                         </span>
                       )}
                     </div>
 
                     {/* Skill Overlap Breakdown */}
                     <div className="flex items-center gap-2 flex-wrap pt-1">
-                      <span className="text-[11px] font-semibold text-slate-600">Matching:</span>
+                      <span className="text-[11px] font-semibold text-slate-600">
+                        Matching:
+                      </span>
                       {(job.matchingSkills || []).slice(0, 5).map((s, idx) => (
-                        <span key={idx} className="text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-medium">
+                        <span
+                          key={idx}
+                          className="text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-medium"
+                        >
                           {s}
                         </span>
                       ))}
                       {job.missingSkills && job.missingSkills.length > 0 && (
                         <>
-                          <span className="text-[11px] font-semibold text-rose-500 ml-2">Missing:</span>
+                          <span className="text-[11px] font-semibold text-rose-500 ml-2">
+                            Missing:
+                          </span>
                           {job.missingSkills.slice(0, 3).map((s, idx) => (
-                            <span key={idx} className="text-[10px] bg-rose-50 text-rose-600 px-2 py-0.5 rounded font-medium">
+                            <span
+                              key={idx}
+                              className="text-[10px] bg-rose-50 text-rose-600 px-2 py-0.5 rounded font-medium"
+                            >
                               {s}
                             </span>
                           ))}
@@ -823,27 +1165,44 @@ export default function AutoApplyPage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-bold text-slate-900">Application Queue</h3>
+              <h3 className="text-sm font-bold text-slate-900">
+                Application Queue
+              </h3>
               <p className="text-xs text-slate-500">
-                Prepared applications awaiting your final review, answer verification, and approval.
+                Prepared applications awaiting your final review, answer
+                verification, and approval.
               </p>
             </div>
           </div>
 
           {queue.length === 0 ? (
             <div className="py-12 card-white text-center">
-              <CheckCircle2 size={32} className="mx-auto text-emerald-500 mb-2" />
-              <p className="text-xs font-medium text-slate-700">No applications currently in queue</p>
-              <p className="text-[11px] text-slate-400 mt-1">Head over to Matching Opportunities to queue new applications.</p>
+              <CheckCircle2
+                size={32}
+                className="mx-auto text-emerald-500 mb-2"
+              />
+              <p className="text-xs font-medium text-slate-700">
+                No applications currently in queue
+              </p>
+              <p className="text-[11px] text-slate-400 mt-1">
+                Head over to Matching Opportunities to queue new applications.
+              </p>
             </div>
           ) : (
             <div className="space-y-3">
               {queue.map((app) => (
-                <div key={app._id} className="card-white p-4.5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div
+                  key={app._id}
+                  className="card-white p-4.5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
+                >
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-bold text-slate-900">{app.jobTitle}</span>
-                      <span className="text-xs text-slate-600">{app.company}</span>
+                      <span className="text-sm font-bold text-slate-900">
+                        {app.jobTitle}
+                      </span>
+                      <span className="text-xs text-slate-600">
+                        {app.company}
+                      </span>
                       <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
                         {app.platform}
                       </span>
@@ -854,7 +1213,9 @@ export default function AutoApplyPage() {
                             : "bg-blue-50 text-blue-700 border border-blue-100"
                         }`}
                       >
-                        {app.submissionMethod === "direct" ? "Direct API" : "Guided Assistant"}
+                        {app.submissionMethod === "direct"
+                          ? "Direct API"
+                          : "Guided Assistant"}
                       </span>
                       <span
                         className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full ${
@@ -868,11 +1229,18 @@ export default function AutoApplyPage() {
                     </div>
 
                     <div className="text-xs text-slate-500 flex items-center gap-3">
-                      <span>Resume: <strong>{app.resumeTitle}</strong></span>
+                      <span>
+                        Resume: <strong>{app.resumeTitle}</strong>
+                      </span>
                       <span>•</span>
-                      <span>{app.questionAnswers?.length || 0} Screening Answers Prepared</span>
+                      <span>
+                        {app.questionAnswers?.length || 0} Screening Answers
+                        Prepared
+                      </span>
                       <span>•</span>
-                      <span className="font-semibold text-brand-600">{app.matchScore}% Fit Score</span>
+                      <span className="font-semibold text-brand-600">
+                        {app.matchScore}% Fit Score
+                      </span>
                     </div>
                   </div>
 
@@ -890,8 +1258,14 @@ export default function AutoApplyPage() {
                         disabled={processingId === app._id}
                         className="btn-primary text-xs px-3.5 py-1.5 flex items-center gap-1.5"
                       >
-                        {processingId === app._id ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
-                        {app.submissionMethod === "direct" ? "Submit via API" : "Launch Guided"}
+                        {processingId === app._id ? (
+                          <Loader2 size={13} className="animate-spin" />
+                        ) : (
+                          <Send size={13} />
+                        )}
+                        {app.submissionMethod === "direct"
+                          ? "Submit via API"
+                          : "Launch Guided"}
                       </button>
                     ) : (
                       <button
@@ -923,17 +1297,29 @@ export default function AutoApplyPage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-bold text-slate-900">Application Submission History</h3>
-              <p className="text-xs text-slate-500">Verified record of applications submitted directly or confirmed via guided workflow.</p>
+              <h3 className="text-sm font-bold text-slate-900">
+                Application Submission History
+              </h3>
+              <p className="text-xs text-slate-500">
+                Verified record of applications submitted directly or confirmed
+                via guided workflow.
+              </p>
             </div>
-            <span className="text-xs font-medium text-slate-500">Total: {historyList.length}</span>
+            <span className="text-xs font-medium text-slate-500">
+              Total: {historyList.length}
+            </span>
           </div>
 
           {historyList.length === 0 ? (
             <div className="py-12 card-white text-center">
               <History size={32} className="mx-auto text-slate-300 mb-2" />
-              <p className="text-xs font-medium text-slate-700">No submission records yet</p>
-              <p className="text-[11px] text-slate-400 mt-1">Applications you submit will appear here with proof of confirmation.</p>
+              <p className="text-xs font-medium text-slate-700">
+                No submission records yet
+              </p>
+              <p className="text-[11px] text-slate-400 mt-1">
+                Applications you submit will appear here with proof of
+                confirmation.
+              </p>
             </div>
           ) : (
             <div className="card-white overflow-hidden">
@@ -950,14 +1336,25 @@ export default function AutoApplyPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs">
                   {historyList.map((app) => (
-                    <tr key={app._id} className="hover:bg-slate-50/50 transition-colors">
+                    <tr
+                      key={app._id}
+                      className="hover:bg-slate-50/50 transition-colors"
+                    >
                       <td className="py-3 px-4">
-                        <div className="font-semibold text-slate-900">{app.jobTitle}</div>
-                        <div className="text-[11px] text-slate-500">{app.company}</div>
+                        <div className="font-semibold text-slate-900">
+                          {app.jobTitle}
+                        </div>
+                        <div className="text-[11px] text-slate-500">
+                          {app.company}
+                        </div>
                       </td>
                       <td className="py-3 px-4">
-                        <div className="font-medium text-slate-800">{app.platform}</div>
-                        <span className="text-[10px] text-slate-500 uppercase">{app.submissionMethod}</span>
+                        <div className="font-medium text-slate-800">
+                          {app.platform}
+                        </div>
+                        <span className="text-[10px] text-slate-500 uppercase">
+                          {app.submissionMethod}
+                        </span>
                       </td>
                       <td className="py-3 px-4 font-mono text-[11px] text-slate-600">
                         {app.providerConfirmation?.confirmationId || "Verified"}
@@ -968,7 +1365,9 @@ export default function AutoApplyPage() {
                         </span>
                       </td>
                       <td className="py-3 px-4 text-slate-500 text-[11px]">
-                        {app.appliedAt ? new Date(app.appliedAt).toLocaleDateString() : "Recently"}
+                        {app.appliedAt
+                          ? new Date(app.appliedAt).toLocaleDateString()
+                          : "Recently"}
                       </td>
                       <td className="py-3 px-4 text-right">
                         {app.jobUrl && (
@@ -993,99 +1392,280 @@ export default function AutoApplyPage() {
 
       {/* TAB 6: AUTOMATION SETTINGS */}
       {activeTab === "settings" && settings && (
-        <div className="card-white p-6 max-w-3xl space-y-6">
-          <div>
-            <h3 className="text-sm font-bold text-slate-900">Automation Parameters & Guardrails</h3>
-            <p className="text-xs text-slate-500">Configure matching thresholds, daily application limits, and candidate approval rules.</p>
+        <div className="card-white p-6 max-w-4xl space-y-6">
+          <div className="border-b border-slate-100 pb-4">
+            <h3 className="text-base font-bold text-slate-900">
+              Automation Parameters & Guardrails
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Configure matching thresholds, daily application limits, target roles, sources, and automated 09:00 IST schedule.
+            </p>
           </div>
 
-          <div className="space-y-4">
-            <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">
-                Daily Application Cap (Max Attempts per Day)
-              </label>
-              <div className="flex items-center gap-4">
-                <input
-                  type="range"
-                  min="1"
-                  max="25"
-                  value={settings.dailyApplicationTarget || 10}
-                  onChange={(e) =>
-                    setSettings((prev) => ({ ...prev, dailyApplicationTarget: Number(e.target.value) }))
-                  }
-                  className="w-full max-w-xs accent-brand-600"
-                />
-                <span className="text-xs font-bold text-brand-700 px-2 py-1 rounded bg-indigo-50 border border-indigo-100">
-                  {settings.dailyApplicationTarget} applications/day
-                </span>
+          {/* Daily Schedule Banner */}
+          <div className="p-4 rounded-xl border border-indigo-100 bg-gradient-to-r from-indigo-50/70 to-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold shadow-sm">
+                <Clock size={20} />
               </div>
-              <p className="text-[11px] text-slate-400 mt-1">
-                Treat this as a maximum cap, never a guarantee. Only matching, suitable applications are processed.
-              </p>
-            </div>
-
-            <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">
-                Minimum Match Score Filter ({settings.minMatchScore}%)
-              </label>
-              <input
-                type="range"
-                min="40"
-                max="95"
-                value={settings.minMatchScore || 70}
-                onChange={(e) =>
-                  setSettings((prev) => ({ ...prev, minMatchScore: Number(e.target.value) }))
-                }
-                className="w-full max-w-xs accent-brand-600"
-              />
-              <p className="text-[11px] text-slate-400 mt-1">
-                Only job opportunities scoring above this threshold will appear in your matching feed.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2 pt-2">
-              <input
-                type="checkbox"
-                id="remoteOnlyToggle"
-                checked={settings.remoteOnly || false}
-                onChange={(e) => setSettings((prev) => ({ ...prev, remoteOnly: e.target.checked }))}
-                className="rounded border-slate-300 text-brand-600 focus:ring-brand-500 h-4 w-4"
-              />
-              <label htmlFor="remoteOnlyToggle" className="text-xs font-semibold text-slate-800">
-                Strict Remote Only (Exclude hybrid and on-site opportunities)
-              </label>
-            </div>
-
-            <div className="flex items-start gap-2.5 pt-2">
-              <input
-                type="checkbox"
-                id="requireApprovalToggle"
-                checked={settings.requireApproval ?? true}
-                onChange={(e) => setSettings((prev) => ({ ...prev, requireApproval: e.target.checked }))}
-                className="rounded border-slate-300 text-brand-600 focus:ring-brand-500 h-4 w-4 mt-0.5"
-              />
               <div>
-                <label htmlFor="requireApprovalToggle" className="text-xs font-semibold text-slate-800 block">
-                  Always Require Candidate Review & Approval
-                </label>
-                <p className="text-[11px] text-slate-500 mt-0.5">
-                  When checked, all applications are placed into the queue for your review. When unchecked, the agent automatically submits matching applications via direct API integrations without manual signoff.
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-indigo-950">
+                    Daily Pipeline Schedule: 09:00 IST
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-200/80 text-indigo-900">
+                    Remote Worldwide
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-600 mt-0.5">
+                  Automated background worker discovers, prepares tailored ATS resumes, and submits up to {settings.dailyApplicationTarget || 20} applications daily.
                 </p>
               </div>
             </div>
 
-            <div className="pt-4 border-t border-slate-100">
+            <div className="flex items-center gap-2 self-end sm:self-center">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.autoScheduleEnabled ?? true}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      autoScheduleEnabled: e.target.checked,
+                    }))
+                  }
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+              </label>
+              <span className="text-xs font-semibold text-slate-700">
+                {settings.autoScheduleEnabled ?? true ? "Scheduled" : "Disabled"}
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            {/* Target AI/ML Roles */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-bold text-slate-800">
+                  Target Roles ({settings.targetRoles?.length || 0} active)
+                </label>
+                <span className="text-[11px] text-slate-400">
+                  Click to toggle roles included in daily discovery
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  "AI Engineer",
+                  "Generative AI Engineer",
+                  "AI Agent Developer",
+                  "Machine Learning Engineer",
+                  "LLM Engineer",
+                  "AI Automation Engineer",
+                  "Full Stack Developer",
+                ].map((role) => {
+                  const isSelected = (settings.targetRoles || []).includes(role);
+                  return (
+                    <button
+                      key={role}
+                      type="button"
+                      onClick={() => {
+                        setSettings((prev) => {
+                          const current = prev.targetRoles || [];
+                          const updated = isSelected
+                            ? current.filter((r) => r !== role)
+                            : [...current, role];
+                          return { ...prev, targetRoles: updated };
+                        });
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 ${
+                        isSelected
+                          ? "bg-indigo-50 border-indigo-200 text-indigo-700 shadow-xs"
+                          : "bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                      }`}
+                    >
+                      {isSelected ? <Check size={12} className="text-indigo-600" /> : <Plus size={12} className="text-slate-400" />}
+                      <span>{role}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Target Job Sources */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-bold text-slate-800">
+                  Job Sources & Integrations ({settings.sources?.length || 0} active)
+                </label>
+                <span className="text-[11px] text-slate-400">
+                  Active platforms scanned for vacancies
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  "LinkedIn",
+                  "Wellfound",
+                  "Company Career Pages",
+                  "Internshala",
+                  "Supported APIs",
+                ].map((src) => {
+                  const isSelected = (settings.sources || []).includes(src);
+                  return (
+                    <button
+                      key={src}
+                      type="button"
+                      onClick={() => {
+                        setSettings((prev) => {
+                          const current = prev.sources || [];
+                          const updated = isSelected
+                            ? current.filter((s) => s !== src)
+                            : [...current, src];
+                          return { ...prev, sources: updated };
+                        });
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 ${
+                        isSelected
+                          ? "bg-emerald-50 border-emerald-200 text-emerald-800 shadow-xs"
+                          : "bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                      }`}
+                    >
+                      {isSelected ? <Check size={12} className="text-emerald-600" /> : <Plus size={12} className="text-slate-400" />}
+                      <span>{src}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Daily Application Cap */}
+            <div className="p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-800">
+                  Daily Application Target (1 – 50)
+                </label>
+                <span className="text-xs font-bold text-brand-700 px-2.5 py-1 rounded-md bg-indigo-50 border border-indigo-100">
+                  {settings.dailyApplicationTarget || 20} applications / day
+                </span>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="50"
+                value={settings.dailyApplicationTarget || 20}
+                onChange={(e) =>
+                  setSettings((prev) => ({
+                    ...prev,
+                    dailyApplicationTarget: Number(e.target.value),
+                  }))
+                }
+                className="w-full accent-brand-600"
+              />
+              <p className="text-[11px] text-slate-500">
+                Recommended: 20 per day. Quality-tailored submissions prevent candidate spam penalties and maximize interview callback rates.
+              </p>
+            </div>
+
+            {/* Match Score Filter */}
+            <div className="p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-800">
+                  Minimum Match Score Filter ({settings.minMatchScore || 65}%)
+                </label>
+                <span className="text-xs font-bold text-slate-700 px-2.5 py-1 rounded-md bg-white border border-slate-200">
+                  ≥ {settings.minMatchScore || 65}% Fit Required
+                </span>
+              </div>
+              <input
+                type="range"
+                min="30"
+                max="95"
+                value={settings.minMatchScore || 65}
+                onChange={(e) =>
+                  setSettings((prev) => ({
+                    ...prev,
+                    minMatchScore: Number(e.target.value),
+                  }))
+                }
+                className="w-full accent-brand-600"
+              />
+              <p className="text-[11px] text-slate-500">
+                Only job opportunities scoring above this threshold will enter the preparation pipeline.
+              </p>
+            </div>
+
+            {/* Remote Only Toggle */}
+            <div className="flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 bg-white">
+              <input
+                type="checkbox"
+                id="remoteOnlyToggle"
+                checked={settings.remoteOnly ?? true}
+                onChange={(e) =>
+                  setSettings((prev) => ({
+                    ...prev,
+                    remoteOnly: e.target.checked,
+                  }))
+                }
+                className="rounded border-slate-300 text-brand-600 focus:ring-brand-500 h-4 w-4"
+              />
+              <div>
+                <label
+                  htmlFor="remoteOnlyToggle"
+                  className="text-xs font-bold text-slate-800 cursor-pointer"
+                >
+                  Strict Remote Only (Worldwide & Remote Friendly)
+                </label>
+                <p className="text-[11px] text-slate-500">
+                  Filters out on-site and non-remote roles, prioritizing global remote positions.
+                </p>
+              </div>
+            </div>
+
+            {/* Approval Mode Toggle */}
+            <div className="flex items-start gap-3 p-3.5 rounded-xl border border-slate-200 bg-white">
+              <input
+                type="checkbox"
+                id="requireApprovalToggle"
+                checked={settings.requireApproval ?? false}
+                onChange={(e) =>
+                  setSettings((prev) => ({
+                    ...prev,
+                    requireApproval: e.target.checked,
+                  }))
+                }
+                className="rounded border-slate-300 text-brand-600 focus:ring-brand-500 h-4 w-4 mt-0.5"
+              />
+              <div>
+                <label
+                  htmlFor="requireApprovalToggle"
+                  className="text-xs font-bold text-slate-800 cursor-pointer block"
+                >
+                  Always Require Candidate Approval Before Direct Submissions
+                </label>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  When checked, all applications halt in &ldquo;Awaiting Candidate Review&rdquo; for manual sign-off. When unchecked, verified direct integrations (such as public Greenhouse boards) submit automatically, while external platforms (LinkedIn, Wellfound, Internshala) guide you with pre-filled answers and 1-click ATS resume download.
+                </p>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+              <div className="text-xs text-slate-400">
+                Last updated: {settings.updatedAt ? new Date(settings.updatedAt).toLocaleDateString() : "Just now"}
+              </div>
               <button
                 onClick={async () => {
                   try {
                     await api.updateAutoApplySettings(settings);
-                    showSuccess("Automation settings saved successfully!");
+                    showSuccess("Automation settings and guardrails saved successfully!");
                   } catch (err) {
                     showError(err.message || "Failed to save settings");
                   }
                 }}
-                className="btn-primary text-xs px-5 py-2"
+                className="btn-primary text-xs px-6 py-2.5 shadow-sm font-semibold flex items-center gap-1.5"
               >
+                <Check size={14} />
                 Save Settings
               </button>
             </div>
@@ -1106,12 +1686,18 @@ export default function AutoApplyPage() {
               {/* Modal Header */}
               <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-slate-50/50">
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">Review & Approve Application</h3>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    Review & Approve Application
+                  </h3>
                   <div className="text-xs text-slate-500 mt-0.5">
-                    {reviewModalApp.jobTitle} • {reviewModalApp.company} ({reviewModalApp.platform})
+                    {reviewModalApp.jobTitle} • {reviewModalApp.company} (
+                    {reviewModalApp.platform})
                   </div>
                 </div>
-                <button onClick={() => setReviewModalApp(null)} className="p-1 rounded-lg hover:bg-slate-200 text-slate-400">
+                <button
+                  onClick={() => setReviewModalApp(null)}
+                  className="p-1 rounded-lg hover:bg-slate-200 text-slate-400"
+                >
                   <X size={16} />
                 </button>
               </div>
@@ -1121,25 +1707,39 @@ export default function AutoApplyPage() {
                 {/* Match Summary */}
                 <div className="p-3 bg-indigo-50/60 rounded-lg border border-indigo-100 flex items-center justify-between">
                   <div>
-                    <div className="font-bold text-brand-900">Fit Compatibility Score: {reviewModalApp.matchScore}%</div>
+                    <div className="font-bold text-brand-900">
+                      Fit Compatibility Score: {reviewModalApp.matchScore}%
+                    </div>
                     <div className="text-[11px] text-brand-700 mt-0.5">
-                      Destination Platform: {reviewModalApp.platform} ({reviewModalApp.submissionMethod === "direct" ? "Official Direct API" : "Guided Assistant"})
+                      Destination Platform: {reviewModalApp.platform} (
+                      {reviewModalApp.submissionMethod === "direct"
+                        ? "Official Direct API"
+                        : "Guided Assistant"}
+                      )
                     </div>
                   </div>
-                  <span className="badge-indigo font-bold text-xs">{reviewModalApp.status}</span>
+                  <span className="badge-indigo font-bold text-xs">
+                    {reviewModalApp.status}
+                  </span>
                 </div>
 
                 {/* Selected Resume */}
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Attached Resume Version</label>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Attached Resume Version
+                  </label>
                   <select
                     value={reviewModalApp.resumeTitle}
                     onChange={(e) => {
-                      const sel = resumes.find((r) => r.title === e.target.value);
+                      const sel = resumes.find(
+                        (r) => r.title === e.target.value,
+                      );
                       setReviewModalApp((prev) => ({
                         ...prev,
                         resumeTitle: e.target.value,
-                        resumeSnapshot: sel ? sel.resumeText : prev.resumeSnapshot,
+                        resumeSnapshot: sel
+                          ? sel.resumeText
+                          : prev.resumeSnapshot,
                       }));
                     }}
                     className="w-full border border-slate-300 rounded-lg p-2 text-xs text-slate-800"
@@ -1154,29 +1754,48 @@ export default function AutoApplyPage() {
 
                 {/* Tailored Cover Letter */}
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Tailored Cover Letter</label>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Tailored Cover Letter
+                  </label>
                   <textarea
                     rows={6}
                     value={reviewModalApp.coverLetter || ""}
-                    onChange={(e) => setReviewModalApp((prev) => ({ ...prev, coverLetter: e.target.value }))}
+                    onChange={(e) =>
+                      setReviewModalApp((prev) => ({
+                        ...prev,
+                        coverLetter: e.target.value,
+                      }))
+                    }
                     className="w-full border border-slate-300 rounded-lg p-2.5 text-xs text-slate-800 font-sans"
                   />
                 </div>
 
                 {/* Screening Question Answers */}
                 <div>
-                  <label className="font-bold text-slate-700 block mb-2">Prepared Screening Answers</label>
+                  <label className="font-bold text-slate-700 block mb-2">
+                    Prepared Screening Answers
+                  </label>
                   <div className="space-y-3">
                     {(reviewModalApp.questionAnswers || []).map((qa, index) => (
-                      <div key={index} className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-1">
-                        <div className="font-semibold text-slate-800">{qa.question}</div>
+                      <div
+                        key={index}
+                        className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-1"
+                      >
+                        <div className="font-semibold text-slate-800">
+                          {qa.question}
+                        </div>
                         <input
                           type="text"
                           value={qa.answer || ""}
                           onChange={(e) => {
-                            const newAnswers = [...reviewModalApp.questionAnswers];
+                            const newAnswers = [
+                              ...reviewModalApp.questionAnswers,
+                            ];
                             newAnswers[index].answer = e.target.value;
-                            setReviewModalApp((prev) => ({ ...prev, questionAnswers: newAnswers }));
+                            setReviewModalApp((prev) => ({
+                              ...prev,
+                              questionAnswers: newAnswers,
+                            }));
                           }}
                           className="w-full bg-white border border-slate-300 rounded p-1.5 text-xs text-slate-800"
                         />
@@ -1244,13 +1863,20 @@ export default function AutoApplyPage() {
                 <div className="flex items-center gap-2">
                   <Bot size={18} className="text-brand-600" />
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900">Guided Application Assistant</h3>
+                    <h3 className="text-sm font-bold text-slate-900">
+                      Guided Application Assistant
+                    </h3>
                     <div className="text-xs text-slate-500">
-                      Step-by-step assistant for {guidedModalData.application?.platform || "External Portal"}
+                      Step-by-step assistant for{" "}
+                      {guidedModalData.application?.platform ||
+                        "External Portal"}
                     </div>
                   </div>
                 </div>
-                <button onClick={() => setGuidedModalData(null)} className="p-1 rounded-lg hover:bg-slate-200 text-slate-400">
+                <button
+                  onClick={() => setGuidedModalData(null)}
+                  className="p-1 rounded-lg hover:bg-slate-200 text-slate-400"
+                >
                   <X size={16} />
                 </button>
               </div>
@@ -1260,9 +1886,12 @@ export default function AutoApplyPage() {
                 {/* Step 1: Open external job link */}
                 <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-between">
                   <div>
-                    <div className="font-bold text-slate-900">Step 1: Open Job Vacancy on Platform</div>
+                    <div className="font-bold text-slate-900">
+                      Step 1: Open Job Vacancy on Platform
+                    </div>
                     <div className="text-[11px] text-slate-500 mt-0.5">
-                      Opens official job posting in a new tab. You complete authentication and final submit.
+                      Opens official job posting in a new tab. You complete
+                      authentication and final submit.
                     </div>
                   </div>
                   <a
@@ -1275,37 +1904,87 @@ export default function AutoApplyPage() {
                   </a>
                 </div>
 
-                {/* Step 2: 1-Click Copy Answers */}
-                <div className="space-y-3">
-                  <div className="font-bold text-slate-800">Step 2: Copy Tailored Answers to Application Form</div>
-                  {(guidedModalData.guidedPackage?.preparedAnswers || []).map((qa, idx) => (
-                    <div key={idx} className="p-3 bg-white rounded-lg border border-slate-200 space-y-1.5 shadow-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-slate-900">{qa.question}</span>
-                        <button
-                          onClick={() => handleCopy(qa.answer, `Answer ${idx + 1}`)}
-                          className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold flex items-center gap-1"
-                        >
-                          {copiedField === `Answer ${idx + 1}` ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
-                          Copy
-                        </button>
-                      </div>
-                      <div className="p-2 bg-slate-50 rounded text-slate-700 font-mono text-[11px]">
-                        {qa.answer}
+                {/* Tailored ATS Resume PDF */}
+                {guidedModalData.application?.generatedPdfBase64 && (
+                  <div className="flex items-center justify-between p-3.5 bg-indigo-50/70 border border-indigo-200 rounded-lg text-xs">
+                    <div className="flex items-center gap-2.5">
+                      <FileText size={18} className="text-brand-700" />
+                      <div>
+                        <div className="font-bold text-slate-900">
+                          Tailored ATS-Optimized Resume (PDF)
+                        </div>
+                        <div className="text-[11px] text-slate-500">
+                          Compiled with ReportLab &bull; Verified single-column ATS typography
+                        </div>
                       </div>
                     </div>
-                  ))}
+                    <button
+                      onClick={() => handleDownloadApplicationResume(guidedModalData.application)}
+                      className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5 shadow-sm shrink-0"
+                    >
+                      <Download size={13} />
+                      Download PDF
+                    </button>
+                  </div>
+                )}
+
+                {/* Step 2: 1-Click Copy Answers */}
+                <div className="space-y-3">
+                  <div className="font-bold text-slate-800">
+                    Step 2: Copy Tailored Answers to Application Form
+                  </div>
+                  {(guidedModalData.guidedPackage?.preparedAnswers || []).map(
+                    (qa, idx) => (
+                      <div
+                        key={idx}
+                        className="p-3 bg-white rounded-lg border border-slate-200 space-y-1.5 shadow-sm"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-slate-900">
+                            {qa.question}
+                          </span>
+                          <button
+                            onClick={() =>
+                              handleCopy(qa.answer, `Answer ${idx + 1}`)
+                            }
+                            className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold flex items-center gap-1"
+                          >
+                            {copiedField === `Answer ${idx + 1}` ? (
+                              <Check size={11} className="text-emerald-600" />
+                            ) : (
+                              <Copy size={11} />
+                            )}
+                            Copy
+                          </button>
+                        </div>
+                        <div className="p-2 bg-slate-50 rounded text-slate-700 font-mono text-[11px]">
+                          {qa.answer}
+                        </div>
+                      </div>
+                    ),
+                  )}
 
                   {/* Copy Cover Letter */}
                   {guidedModalData.guidedPackage?.coverLetter && (
                     <div className="p-3 bg-white rounded-lg border border-slate-200 space-y-1.5 shadow-sm">
                       <div className="flex items-center justify-between">
-                        <span className="font-semibold text-slate-900">Tailored Cover Letter</span>
+                        <span className="font-semibold text-slate-900">
+                          Tailored Cover Letter
+                        </span>
                         <button
-                          onClick={() => handleCopy(guidedModalData.guidedPackage.coverLetter, "Cover Letter")}
+                          onClick={() =>
+                            handleCopy(
+                              guidedModalData.guidedPackage.coverLetter,
+                              "Cover Letter",
+                            )
+                          }
                           className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold flex items-center gap-1"
                         >
-                          {copiedField === "Cover Letter" ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
+                          {copiedField === "Cover Letter" ? (
+                            <Check size={11} className="text-emerald-600" />
+                          ) : (
+                            <Copy size={11} />
+                          )}
                           Copy Letter
                         </button>
                       </div>
@@ -1318,9 +1997,13 @@ export default function AutoApplyPage() {
 
                 {/* Step 3: Candidate Confirmation */}
                 <div className="p-4 bg-emerald-50/60 rounded-lg border border-emerald-200 space-y-3">
-                  <div className="font-bold text-emerald-900">Step 3: Confirm Your Submission</div>
+                  <div className="font-bold text-emerald-900">
+                    Step 3: Confirm Your Submission
+                  </div>
                   <p className="text-[11px] text-emerald-800">
-                    Once you have submitted on the company website, enter your confirmation number or notes below to record the application in your CareerOS Tracker.
+                    Once you have submitted on the company website, enter your
+                    confirmation number or notes below to record the application
+                    in your CareerOS Tracker.
                   </p>
                   <div className="flex items-center gap-3">
                     <input
@@ -1332,10 +2015,16 @@ export default function AutoApplyPage() {
                     />
                     <button
                       onClick={handleConfirmGuided}
-                      disabled={processingId === guidedModalData.application?._id}
+                      disabled={
+                        processingId === guidedModalData.application?._id
+                      }
                       className="btn-primary text-xs px-4 py-2 shrink-0 flex items-center gap-1.5"
                     >
-                      {processingId ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
+                      {processingId ? (
+                        <Loader2 size={13} className="animate-spin" />
+                      ) : (
+                        <CheckCircle2 size={13} />
+                      )}
                       Confirm I Submitted
                     </button>
                   </div>
@@ -1357,8 +2046,13 @@ export default function AutoApplyPage() {
               className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-5 space-y-4"
             >
               <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-                <h3 className="text-sm font-bold text-slate-900">Configure {connectModalProvider.providerName}</h3>
-                <button onClick={() => setConnectModalProvider(null)} className="p-1 text-slate-400 hover:text-slate-600">
+                <h3 className="text-sm font-bold text-slate-900">
+                  Configure {connectModalProvider.providerName}
+                </h3>
+                <button
+                  onClick={() => setConnectModalProvider(null)}
+                  className="p-1 text-slate-400 hover:text-slate-600"
+                >
                   <X size={16} />
                 </button>
               </div>
@@ -1366,12 +2060,19 @@ export default function AutoApplyPage() {
               <div className="space-y-3 text-xs">
                 {connectModalProvider.providerId === "greenhouse" && (
                   <div>
-                    <label className="font-bold text-slate-700 block mb-1">Employer Board Token</label>
+                    <label className="font-bold text-slate-700 block mb-1">
+                      Employer Board Token
+                    </label>
                     <input
                       type="text"
                       placeholder="e.g. technova or airbnb"
                       value={connectForm.boardToken}
-                      onChange={(e) => setConnectForm((prev) => ({ ...prev, boardToken: e.target.value }))}
+                      onChange={(e) =>
+                        setConnectForm((prev) => ({
+                          ...prev,
+                          boardToken: e.target.value,
+                        }))
+                      }
                       className="w-full border border-slate-300 rounded p-2 text-xs text-slate-800"
                     />
                   </div>
@@ -1379,35 +2080,57 @@ export default function AutoApplyPage() {
 
                 {connectModalProvider.providerId === "lever" && (
                   <div>
-                    <label className="font-bold text-slate-700 block mb-1">Employer Lever Site Name</label>
+                    <label className="font-bold text-slate-700 block mb-1">
+                      Employer Lever Site Name
+                    </label>
                     <input
                       type="text"
                       placeholder="e.g. netflix or figma"
                       value={connectForm.site}
-                      onChange={(e) => setConnectForm((prev) => ({ ...prev, site: e.target.value }))}
+                      onChange={(e) =>
+                        setConnectForm((prev) => ({
+                          ...prev,
+                          site: e.target.value,
+                        }))
+                      }
                       className="w-full border border-slate-300 rounded p-2 text-xs text-slate-800"
                     />
                   </div>
                 )}
 
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Optional API Key / Access Token</label>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Optional API Key / Access Token
+                  </label>
                   <input
                     type="password"
                     placeholder="API key (stored encrypted at rest)"
                     value={connectForm.apiKey}
-                    onChange={(e) => setConnectForm((prev) => ({ ...prev, apiKey: e.target.value }))}
+                    onChange={(e) =>
+                      setConnectForm((prev) => ({
+                        ...prev,
+                        apiKey: e.target.value,
+                      }))
+                    }
                     className="w-full border border-slate-300 rounded p-2 text-xs text-slate-800"
                   />
-                  <p className="text-[10px] text-slate-400 mt-1">Credentials are encrypted with AES-256-GCM.</p>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Credentials are encrypted with AES-256-GCM.
+                  </p>
                 </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                <button onClick={() => setConnectModalProvider(null)} className="btn-secondary text-xs">
+                <button
+                  onClick={() => setConnectModalProvider(null)}
+                  className="btn-secondary text-xs"
+                >
                   Cancel
                 </button>
-                <button onClick={handleSaveCredentials} className="btn-primary text-xs">
+                <button
+                  onClick={handleSaveCredentials}
+                  className="btn-primary text-xs"
+                >
                   Save Credentials
                 </button>
               </div>
