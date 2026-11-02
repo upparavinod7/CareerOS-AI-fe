@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="careerGradient" x1="8" y1="10" x2="56" y2="54" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#16D9F5"/>
+      <stop offset="0.52" stop-color="#168BFF"/>
+      <stop offset="1" stop-color="#8B35F5"/>
+    </linearGradient>
+    <linearGradient id="caseGradient" x1="25" y1="25" x2="42" y2="47" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#C9D8FF"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded navy app tile, designed to remain legible at favicon size -->
+  <rect width="64" height="64" rx="14" fill="#070B2B"/>
+
+  <!-- Bold open C/ribbon mark -->
+  <path d="M43.8 13.8
+           C39.8 10.9 35.8 9.5 31.4 9.5
+           C19.1 9.5 10 19.1 10 31.7
+           C10 44.3 19.2 54.5 31.6 54.5
+           C36.1 54.5 40.3 53 44.1 50.1
+           L38.7 44.8
+           C36.6 46.2 34.2 47 31.7 47
+           C23.3 47 17.7 40.5 17.7 31.8
+           C17.7 23.2 23.3 17 31.5 17
+           C34.2 17 36.7 17.8 38.8 19.4
+           Z"
+        fill="url(#careerGradient)"/>
+
+  <!-- Compact briefcase -->
+  <path d="M25.5 23.5v-3.2c0-1.8 1.4-3.2 3.2-3.2h6.6c1.8 0 3.2 1.4 3.2 3.2v3.2h-3.4v-2.9h-6.2v2.9z"
+        fill="url(#caseGradient)"/>
+  <rect x="21" y="23" width="22" height="20" rx="3.2" fill="url(#caseGradient)"/>
+  <path d="M21 30.5h22v4.2c0 1.2-1 2.2-2.2 2.2H23.2c-1.2 0-2.2-1-2.2-2.2z"
+        fill="#D9E5FF"/>
+  <path d="M29 30.5v2.2c0 .8.6 1.4 1.4 1.4h3.2c.8 0 1.4-.6 1.4-1.4v-2.2"
+        fill="none" stroke="#070B2B" stroke-width="2.4" stroke-linecap="round"/>
+
+  <!-- Small AI sparkle -->
+  <path d="M49.5 13.2
+           C50.2 17 51.5 18.3 55.3 19
+           C51.5 19.7 50.2 21 49.5 24.8
+           C48.8 21 47.5 19.7 43.7 19
+           C47.5 18.3 48.8 17 49.5 13.2Z"
+        fill="#22DDF4"/>
+</svg>
