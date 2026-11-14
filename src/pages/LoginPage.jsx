@@ -33,6 +33,19 @@ export default function LoginPage() {
     }
   };
 
+  const handleUseDemo = (autoLogin = false) => {
+    setEmail("demo@careeros.ai");
+    setPassword("password123");
+    if (autoLogin) {
+      setLoading(true);
+      setError("");
+      login("demo@careeros.ai", "password123")
+        .then(() => navigate("/dashboard"))
+        .catch((err) => setError(err.message || "Failed to sign in with demo account."))
+        .finally(() => setLoading(false));
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
@@ -58,6 +71,31 @@ export default function LoginPage() {
               {error}
             </div>
           )}
+
+          {/* Quick Demo Access Card */}
+          <div className="mb-5 p-3 rounded-xl bg-indigo-50/60 border border-indigo-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+            <div>
+              <span className="font-bold text-slate-900 block">Quick Demo Access</span>
+              <span className="text-[11px] text-brand-700 font-mono">demo@careeros.ai / password123</span>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => handleUseDemo(false)}
+                className="px-2 py-1 rounded-md text-[11px] font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs"
+              >
+                Fill Credentials
+              </button>
+              <button
+                type="button"
+                onClick={() => handleUseDemo(true)}
+                disabled={loading}
+                className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-brand-700 text-white hover:bg-brand-800 transition-colors shadow-xs"
+              >
+                1-Click Sign In
+              </button>
+            </div>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-4 text-xs">
             <div>
