@@ -141,12 +141,24 @@ export const api = {
   disconnectAccount: (provider) =>
     http.delete(`/integrations/${provider}`).then((r) => r.data),
 
-  // Multi-Resume Versions
+  // Multi-Resume Versions & PDF Intelligence
   listResumes: () =>
     http.get("/users/resumes").then((r) => r.data.data || r.data),
 
   addResume: (payload) =>
     http.post("/users/resumes", payload).then((r) => r.data.data || r.data),
+
+  uploadResumePdf: (payload) =>
+    http.post("/users/resumes/upload-pdf", payload).then((r) => r.data),
+
+  tailorResumeVersion: (id, payload) =>
+    http.post(`/users/resumes/${id}/tailor`, payload).then((r) => r.data),
+
+  downloadResumePdfBlob: (id) =>
+    http.get(`/users/resumes/${id}/download-pdf`, { responseType: "blob" }).then((r) => r.data),
+
+  downloadMasterResumePdfBlob: () =>
+    http.get("/users/resumes/master/download-pdf", { responseType: "blob" }).then((r) => r.data),
 
   setDefaultResume: (id) =>
     http.patch(`/users/resumes/${id}/default`).then((r) => r.data.data || r.data),

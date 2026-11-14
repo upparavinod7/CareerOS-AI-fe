@@ -275,6 +275,39 @@ export default function ResumeOptimizerPage() {
     }
   };
 
+  const [isSavingVersion, setIsSavingVersion] = useState(false);
+  const handleSaveToProfileVersions = async () => {
+    const resumeToExport = getConsolidatedResume();
+    if (!resumeToExport) return;
+
+    setIsSavingVersion(true);
+    try {
+      const skillsList = [];
+      if (resumeToExport.skills) {
+        Object.values(resumeToExport.skills).forEach((arr) => {
+          if (Array.isArray(arr)) skillsList.push(...arr);
+        });
+      }
+
+      await api.addResume({
+        title: `${role} (AI Optimized)`,
+        targetRole: role,
+        resumeText: resumeText || "Optimized structured resume",
+        skills: Array.from(new Set(skillsList)),
+        structuredResume: resumeToExport,
+        atsScore: atsReport?.overall_score || 88,
+        tailoredWithAI: true,
+        tailoredRole: role,
+        bulletDiffs: optimizationReport?.diffs || []
+      });
+      success("Saved as tailored version in your profile!");
+    } catch (err) {
+      showError(err.message || "Failed to save version to profile");
+    } finally {
+      setIsSavingVersion(false);
+    }
+  };
+
   const handleDownloadPDF = async () => {
     const resumeToExport = getConsolidatedResume();
     if (!resumeToExport) return;
@@ -925,23 +958,44 @@ export default function ResumeOptimizerPage() {
                 </p>
               </div>
 
-              <button
-                onClick={handleDownloadPDF}
-                disabled={isGeneratingPDF}
-                className="btn-primary py-2.5 px-6 text-xs flex items-center gap-2"
-              >
-                {isGeneratingPDF ? (
-                  <>
-                    <Loader2 size={14} className="animate-spin" />
-                    Compiling PDF...
-                  </>
-                ) : (
-                  <>
-                    <Download size={14} />
-                    Download ATS Resume (PDF)
-                  </>
-                )}
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleSaveToProfileVersions}
+                  disabled={isSavingVersion}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs transition-all"
+                >
+                  {isSavingVersion ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      Saving to Profile...
+                    </>
+                  ) : (
+                    <>
+                      <Save size={14} />
+                      Save to Profile Versions
+                    </>
+                  )}
+                </button>
+
+                <button
+                  onClick={handleDownloadPDF}
+                  disabled={isGeneratingPDF}
+                  className="btn-primary py-2.5 px-6 text-xs flex items-center gap-2"
+                >
+                  {isGeneratingPDF ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      Compiling PDF...
+                    </>
+                  ) : (
+                    <>
+                      <Download size={14} />
+                      Download ATS Resume (PDF)
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* Validation Audit Cards */}
